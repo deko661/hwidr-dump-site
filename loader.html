@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HWIDR SDK Viewer - Loading...</title>
+<style>
+body{margin:0;background:#0a0a0a;color:#e0e0e0;font-family:Consolas,monospace;display:flex;align-items:center;justify-content:center;height:100vh}
+.loader{text-align:center}
+.spinner{width:40px;height:40px;border:3px solid #333;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status{font-size:12px;color:#999}
+</style>
+</head>
+<body>
+<div class="loader">
+<div class="spinner"></div>
+<div class="status" id="status">Loading...</div>
+</div>
+<script>
+var nameData=[],funcData={},objData=[],sdkData={},sdkContent={},apexData=null,EMBEDDED_VERSIONS={};
+
+var chunkUrls=['index.html'];
+
+document.getElementById('status').textContent='Loading data and page chunks...';
+
+Promise.all([
+  Promise.all([
+fetch('data/apexData.json').then(r=>r.text()).then(t=>{apexData=JSON.parse(t)}),
+fetch('data/funcData.json').then(r=>r.text()).then(t=>{funcData=JSON.parse(t)}),
+fetch('data/nameData.json').then(r=>r.text()).then(t=>{nameData=JSON.parse(t)}),
+Promise.all([fetch('data/objData.json.part0').then(r=>r.text()),fetch('data/objData.json.part1').then(r=>r.text()),fetch('data/objData.json.part2').then(r=>r.text()),fetch('data/objData.json.part3').then(r=>r.text())]).then(parts=>{objData=JSON.parse(parts.join(''))}),
+fetch('data/sdkContent.json').then(r=>r.text()).then(t=>{sdkContent=JSON.parse(t)}),
+fetch('data/sdkData.json').then(r=>r.text()).then(t=>{sdkData=JSON.parse(t)})
+  ]),
+  Promise.all(chunkUrls.map(function(u){return fetch(u).then(function(r){return r.text()})}))
+]).then(function(results){
+  var fullHtml=results[1].join('');
+  document.open();
+  document.write(fullHtml);
+  document.close();
+}).catch(function(e){
+  document.getElementById('status').textContent='Error: '+e.message;
+  console.error(e);
+});
+</script>
+</body>
+</html>
