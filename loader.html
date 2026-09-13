@@ -26,12 +26,12 @@ document.getElementById('status').textContent='Loading data and page chunks...';
 
 Promise.all([
   Promise.all([
-fetch('data/apexData.json').then(r=>r.text()).then(t=>{apexData=JSON.parse(t)}),
-fetch('data/funcData.json').then(r=>r.text()).then(t=>{funcData=JSON.parse(t)}),
-fetch('data/nameData.json').then(r=>r.text()).then(t=>{nameData=JSON.parse(t)}),
-Promise.all([fetch('data/objData.json.part0').then(r=>r.text()),fetch('data/objData.json.part1').then(r=>r.text()),fetch('data/objData.json.part2').then(r=>r.text()),fetch('data/objData.json.part3').then(r=>r.text())]).then(parts=>{objData=JSON.parse(parts.join(''))}),
-fetch('data/sdkContent.json').then(r=>r.text()).then(t=>{sdkContent=JSON.parse(t)}),
-fetch('data/sdkData.json').then(r=>r.text()).then(t=>{sdkData=JSON.parse(t)})
+fetch('data/apexData.json').then(r=>r.text()).then(t=>{apexData=eval(t)}),
+fetch('data/funcData.json').then(r=>r.text()).then(t=>{funcData=eval(t)}),
+fetch('data/nameData.json').then(r=>r.text()).then(t=>{nameData=eval(t)}),
+Promise.all([fetch('data/objData.json.part0').then(r=>r.text()),fetch('data/objData.json.part1').then(r=>r.text()),fetch('data/objData.json.part2').then(r=>r.text()),fetch('data/objData.json.part3').then(r=>r.text())]).then(parts=>{objData=eval(parts.join(''))}),
+fetch('data/sdkContent.json').then(r=>r.text()).then(t=>{sdkContent=eval(t)}),
+fetch('data/sdkData.json').then(r=>r.text()).then(t=>{sdkData=eval(t)})
   ]),
   Promise.all(chunkUrls.map(function(u){return fetch(u).then(function(r){return r.text()})}))
 ]).then(function(results){
