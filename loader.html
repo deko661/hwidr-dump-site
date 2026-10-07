@@ -20,19 +20,19 @@ body{margin:0;background:#0a0a0a;color:#e0e0e0;font-family:Consolas,monospace;di
 <script>
 var nameData=[],funcData={},objData=[],sdkData={},sdkContent={},apexData=null,EMBEDDED_VERSIONS={};
 
-var chunkUrls=['index.html?v=1791395644'];
+var chunkUrls=['app.html?v=1791398234'];
 
 document.getElementById('status').textContent='Loading data and page chunks...';
 
 Promise.all([
   Promise.all([
-fetch('data/versions.json?v=1791395644').then(r=>r.text()).then(t=>{EMBEDDED_VERSIONS=JSON.parse(t)}),
-fetch('data/apexData.json?v=1791395644').then(r=>r.text()).then(t=>{apexData=JSON.parse(t)}),
-fetch('data/funcData.json?v=1791395644').then(r=>r.text()).then(t=>{funcData=JSON.parse(t)}),
-fetch('data/nameData.json?v=1791395644').then(r=>r.text()).then(t=>{nameData=JSON.parse(t)}),
-fetch('data/objData.json?v=1791395644').then(r=>r.text()).then(t=>{objData=JSON.parse(t)}),
-Promise.all([fetch('data/sdkContent.json.part0?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part1?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part2?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part3?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part4?v=1791395644').then(r=>r.text())]).then(parts=>{var o=parts[0].trim().charAt(0),c=o==='['?']':'}';sdkContent=JSON.parse(o+parts.map(p=>p.trim().slice(1,-1)).join(',')+c)}),
-fetch('data/sdkData.json?v=1791395644').then(r=>r.text()).then(t=>{sdkData=JSON.parse(t)})
+fetch('data/versions.json?v=1791398234').then(r=>r.text()).then(t=>{EMBEDDED_VERSIONS=JSON.parse(t)}),
+fetch('data/apexData.json?v=1791398234').then(r=>r.text()).then(t=>{apexData=JSON.parse(t)}),
+fetch('data/funcData.json?v=1791398234').then(r=>r.text()).then(t=>{funcData=JSON.parse(t)}),
+fetch('data/nameData.json?v=1791398234').then(r=>r.text()).then(t=>{nameData=JSON.parse(t)}),
+fetch('data/objData.json?v=1791398234').then(r=>r.text()).then(t=>{objData=JSON.parse(t)}),
+Promise.all([fetch('data/sdkContent.json.part0?v=1791398234').then(r=>r.text()),fetch('data/sdkContent.json.part1?v=1791398234').then(r=>r.text()),fetch('data/sdkContent.json.part2?v=1791398234').then(r=>r.text()),fetch('data/sdkContent.json.part3?v=1791398234').then(r=>r.text()),fetch('data/sdkContent.json.part4?v=1791398234').then(r=>r.text())]).then(parts=>{var o=parts[0].trim().charAt(0),c=o==='['?']':'}';sdkContent=JSON.parse(o+parts.map(p=>p.trim().slice(1,-1)).join(',')+c)}),
+fetch('data/sdkData.json?v=1791398234').then(r=>r.text()).then(t=>{sdkData=JSON.parse(t)})
   ]),
   Promise.all(chunkUrls.map(function(u){return fetch(u).then(function(r){return r.text()})}))
 ]).then(function(results){

@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HWIDR SDK Viewer</title>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+.captcha-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .4s}
+.captcha-overlay.hidden{opacity:0;pointer-events:none}
+.captcha-title{font-size:18px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
+.captcha-sub{font-size:12px;color:var(--fg2)}
+:root{
+--bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--bg4:#222;
+--fg:#e0e0e0;--fg2:#999;--accent:#fff;--accent2:#ccc;
+--border:#2a2a2a;--border2:#333;--code-bg:#0d0d0d;
+--hover:#1f1f1f;--select:#2a2a2a;
+}
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,Monaco,'Courier New',monospace;font-size:13px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#555}
+.layout{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:240px;min-width:240px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:16px 16px 12px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:14px;font-weight:600;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.sidebar-header .subtitle{font-size:11px;color:var(--fg2)}
+.nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-item{padding:8px 16px;cursor:pointer;color:var(--fg2);font-size:12px;display:flex;align-items:center;gap:8px;transition:all .1s}
+.nav-item:hover{background:var(--hover);color:var(--fg)}
+.nav-item.active{background:var(--select);color:var(--accent);border-left:2px solid var(--accent)}
+.nav-item .icon{width:16px;text-align:center;font-size:10px;color:var(--fg2)}
+.nav-section{padding:12px 16px 4px;font-size:10px;color:var(--fg2);text-transform:uppercase;letter-spacing:1px}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg2);display:flex;align-items:center;gap:12px;min-height:44px}
+.topbar .breadcrumb{font-size:12px;color:var(--fg2)}
+.topbar .breadcrumb span{color:var(--accent)}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;transition:border-color .2s}
+.stat-card:hover{border-color:var(--border2)}
+.stat-card .label{font-size:10px;color:var(--fg2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.stat-card .value{font-size:22px;color:var(--accent);font-weight:600}
+.stat-card .detail{font-size:11px;color:var(--fg2);margin-top:4px}
+
+/* OFFSETS */
+.offset-group{margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.offset-ns{padding:8px 14px;font-size:11px;font-weight:600;color:var(--accent);background:var(--bg3);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
+.offset-entry{display:flex;justify-content:space-between;align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.offset-entry:last-child{border-bottom:none}
+.offset-entry:hover{background:var(--hover)}
+.offset-name{color:var(--fg)}
+.offset-val{color:var(--accent2);font-weight:500;display:flex;align-items:center;gap:6px}
+.copy-btn{background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--fg2);padding:2px 6px;font-size:9px;font-family:inherit;cursor:pointer;opacity:0;transition:opacity .15s}
+.offset-entry:hover .copy-btn{opacity:1}
+.copy-btn:hover{background:var(--bg4);color:var(--fg)}
+.copy-btn.copied{color:var(--accent);border-color:var(--accent2);opacity:1}
+
+/* CODE */
+.code-block{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.code-block pre{padding:16px;overflow-x:auto;font-size:12px;line-height:1.6;color:var(--fg);white-space:pre}
+.code-block .header{padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;color:var(--fg2)}
+
+/* DUMPS */
+.dump-controls{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.dump-controls input,.dump-controls select{background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 10px;font-size:12px;font-family:inherit;outline:none}
+.dump-controls input{flex:1;min-width:200px}
+.dump-controls select{min-width:140px}
+.dump-controls button{background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 12px;font-size:12px;font-family:inherit;cursor:pointer}
+.dump-controls button:hover{background:var(--bg4)}
+.dump-table{width:100%;border-collapse:collapse}
+.dump-table th{text-align:left;padding:8px 12px;font-size:10px;color:var(--fg2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:1}
+.dump-table td{padding:5px 12px;border-bottom:1px solid var(--border);font-size:12px}
+.dump-table tr:hover{background:var(--hover)}
+.dump-table .idx{color:var(--fg2);min-width:60px}
+.dump-table .addr{color:#6a9fb5;min-width:120px}
+.dump-table .type{color:#b294bb;min-width:80px}
+.dump-table .name{color:var(--fg)}
+.dump-table .flags{color:#6a9fb5}
+.pagination{display:flex;gap:4px;margin-top:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+.pagination button{background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--fg2);padding:4px 10px;font-size:11px;font-family:inherit;cursor:pointer}
+.pagination button:hover{background:var(--bg4);color:var(--fg)}
+.pagination button.active{background:var(--select);color:var(--accent);border-color:var(--accent2)}
+.pagination .info{color:var(--fg2);font-size:11px;padding:0 8px}
+
+/* LETTER INDEX */
+.letter-index{display:flex;gap:3px;margin-bottom:12px;flex-wrap:wrap}
+.letter-index button{background:var(--bg2);border:1px solid var(--border);border-radius:3px;color:var(--fg2);padding:4px 8px;font-size:11px;font-family:inherit;cursor:pointer;min-width:28px;text-align:center}
+.letter-index button:hover{background:var(--bg4);color:var(--fg)}
+.letter-index button.active{background:var(--select);color:var(--accent);border-color:var(--accent2)}
+
+/* SDK */
+.sdk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.sdk-item{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:12px;cursor:default;transition:border-color .1s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sdk-item:hover{border-color:var(--accent2);background:var(--hover)}
+.sdk-file-item{height:32px;line-height:32px;padding:0 12px;font-size:12px;color:var(--fg2);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:background .05s}
+.sdk-file-item:hover{background:var(--hover);color:var(--fg)}
+.sdk-file-item.selected{background:var(--select);color:var(--accent)}
+.sdk-count{font-size:11px;color:var(--fg2);margin-bottom:12px}
+.sdk-tabs{display:flex;gap:2px;padding:6px 12px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.sdk-tab{padding:5px 12px;font-size:11px;border-radius:4px;cursor:pointer;color:var(--fg2);transition:background .1s,color .1s;user-select:none}
+.sdk-tab:hover{background:var(--hover);color:var(--fg)}
+.sdk-tab.active{background:var(--select);color:var(--accent);font-weight:600}
+.sdk-tab .tab-count{margin-left:4px;opacity:.6;font-weight:400}
+.sdk-hl-kw{color:#c586c0}.sdk-hl-type{color:#4ec9b0}.sdk-hl-str{color:#ce9178}.sdk-hl-num{color:#b5cea8}.sdk-hl-cmt{color:#6a9955;font-style:italic}.sdk-hl-pre{color:#c586c0}.sdk-hl-off{color:#808080}
+.game-selector{display:flex;gap:4px;margin-bottom:16px}
+.game-btn{padding:6px 16px;font-size:12px;border-radius:4px;cursor:pointer;color:var(--fg2);background:var(--bg2);border:1px solid var(--border);transition:all .1s;font-family:inherit}
+.game-btn:hover{background:var(--hover);color:var(--fg)}
+.game-btn.active{background:var(--select);color:var(--accent);border-color:var(--accent2);font-weight:600}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;transition:background .3s}
+.status-dot.green{background:#4caf50;box-shadow:0 0 6px #4caf50}
+.status-dot.red{background:#f44336;box-shadow:0 0 6px #f44336}
+.status-dot.pending{background:#ff9800;box-shadow:0 0 6px #ff9800}
+.game-btn .ver{font-size:10px;opacity:.6;margin-left:4px;font-weight:400}
+.nav-game{display:none}
+.nav-game.active{display:block}
+
+.layout{position:relative;z-index:1}
+
+/* BUILDBAR */
+.build-bar{display:flex;align-items:center;margin-bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;font-size:11px}
+.build-item{flex:1;display:flex;align-items:center;gap:8px;padding:8px 16px;color:var(--fg2);border-right:1px solid var(--border)}
+.build-item:last-child{border-right:none}
+.build-item .label{color:var(--fg2);text-transform:uppercase;letter-spacing:.5px;font-size:10px;white-space:nowrap}
+.build-item .val{color:var(--accent);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.build-icon{color:var(--accent2);font-size:11px;flex-shrink:0}
+
+/* PANELS */
+.panel{display:none}
+.panel.active{display:block}
+#panel-sdk.active{display:flex}
+</style>
+</head>
+<body>
+<div class="captcha-overlay" id="captcha-overlay">
+    <div class="captcha-title">HWIDR SDK Viewer</div>
+    <div class="captcha-sub">Checking...</div>
+    <div class="cf-turnstile" data-sitekey="0x4AAAAAAEct7SWC6yI9-pD8" data-callback="onCaptchaSuccess" data-theme="dark"></div>
+</div>
+<div class="layout">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>HWIDR SDK</h1>
+            <div class="subtitle" id="sidebar-subtitle">Fortnite Dumper Viewer</div>
+        </div>
+        <div class="nav">
+            <div class="nav-section">General</div>
+            <div class="nav-item active" data-section="overview" onclick="showSection('overview')">
+                <span class="icon"></span> Overview
+            </div>
+            <div class="nav-game active" data-game="fortnite">
+                <div class="nav-section">Fortnite</div>
+                <div class="nav-item" data-section="offsets" onclick="showSection('offsets')">
+                    <span class="icon"></span> Offsets
+                </div>
+                <div class="nav-item" data-section="decrypts" onclick="showSection('decrypts')">
+                    <span class="icon"></span> Decrypts
+                </div>
+                <div class="nav-section">Dumps</div>
+                <div class="nav-item" data-section="names" onclick="showSection('names')">
+                    <span class="icon"></span> Names (56,863)
+                </div>
+                <div class="nav-item" data-section="functions" onclick="showSection('functions')">
+                    <span class="icon"></span> Functions (86,917)
+                </div>
+                <div class="nav-item" data-section="objects" onclick="showSection('objects')">
+                    <span class="icon"></span> Objects (56,863)
+                </div>
+                <div class="nav-section">SDK</div>
+                <div class="nav-item" data-section="sdk" onclick="showSection('sdk')">
+                    <span class="icon">&gt;</span> SDK (51,900)
+                </div>
+            </div>
+            <div class="nav-game" data-game="apex">
+                <div class="nav-section">Apex Legends</div>
+                <div class="nav-item" data-section="apex-mics" onclick="showSection('apex-mics')">
+                    <span class="icon"></span> Global Pointers
+                </div>
+                <div class="nav-item" data-section="apex-buttons" onclick="showSection('apex-buttons')">
+                    <span class="icon"></span> Buttons
+                </div>
+                <div class="nav-item" data-section="apex-recvtables" onclick="showSection('apex-recvtables')">
+                    <span class="icon"></span> RecvTables
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="main">
+        <div class="topbar">
+            <div class="breadcrumb" id="breadcrumb"><span>Overview</span></div>
+        </div>
+        <div class="content" id="content">
+
+            <!-- OVERVIEW -->
+            <div class="panel active" id="panel-overview">
+                <div class="game-selector">
+                    <div class="game-btn active" onclick="switchGame('fortnite')"><span class="status-dot pending" id="dot-fortnite"></span>Fortnite<span class="ver" id="ver-fortnite"></span></div>
+                    <div class="game-btn" onclick="switchGame('apex')"><span class="status-dot pending" id="dot-apex"></span>Apex Legends<span class="ver" id="ver-apex"></span></div>
+                </div>
+                <div id="overview-fortnite">
+                    <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:24px">
+                    <div style="flex:1">
+                        <div style="font-size:18px;color:var(--accent);font-weight:600;margin-bottom:10px">Hey, it’s 0x661. </div>
+                        <div style="font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:10px">I’m way too tired to keep dumping the game myself, so shoutout to Bear for dumping the game after every update. I repost his dumps on this site to make them easier to browse and read.</div>
+                        <div style="font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:14px">Join the Discord: <a href="https://discord.gg/YZJgRkEyVH" target="_blank" style="color:var(--accent2);text-decoration:underline">discord.gg/YZJgRkEyVH</a></div>
+                        <div style="font-size:13px;color:var(--fg2)">Enjoy the viewer.</div>
+                    </div>
+                    <div style="flex-shrink:0"><img src="https://files.catbox.moe/oa8lzh.png" style="height:300px;border-radius:6px;border:1px solid var(--border)"></div>
+                </div>
+                <div class="build-bar" id="build-bar">
+                    <div class="build-item"><span class="build-icon">&#9660;</span><span class="label">Build</span><span class="val" id="build-hash">Loading...</span></div>
+                    <div class="build-item"><span class="build-icon">&#9733;</span><span class="label">Target</span><span class="val" id="build-target">-</span></div>
+                    <div class="build-item"><span class="build-icon">&#9776;</span><span class="label">Size</span><span class="val" id="build-size">-</span></div>
+                    <div class="build-item"><span class="build-icon">&#9650;</span><span class="label">Released</span><span class="val" id="build-date">-</span></div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">Names (GNames)</div>
+                        <div class="value">56,863</div>
+                        <div class="detail">Name entries in pool</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Objects (GObjects)</div>
+                        <div class="value">56,863</div>
+                        <div class="detail">UObject entries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Functions</div>
+                        <div class="value">86,917</div>
+                        <div class="detail">UFunction entries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Classes</div>
+                        <div class="value">9,181</div>
+                        <div class="detail">Unique class definitions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">SDK Types</div>
+                        <div class="value">51,900</div>
+                        <div class="detail">Generated header files</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Object Types</div>
+                        <div class="value">12</div>
+                        <div class="detail">Unique object categories</div>
+                    </div>
+                </div>
+                </div>
+                <div id="overview-apex" style="display:none">
+                    <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:24px">
+                    <div style="flex:1">
+                        <div style="font-size:18px;color:var(--accent);font-weight:600;margin-bottom:10px">Hey, it’s 0x661.</div>
+                        <div style="font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:10px">Sometimes I dump Apex myself, and sometimes I just repost dumps I find on UnknownCheats and other forums.</div>
+                        <div style="font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:14px">Join the Discord: <a href="https://discord.gg/YZJgRkEyVH" target="_blank" style="color:var(--accent2);text-decoration:underline">discord.gg/YZJgRkEyVH</a></div>
+                        <div style="font-size:13px;color:var(--fg2)">Enjoy the viewer.</div>
+                    </div>
+                    <div style="flex-shrink:0"><img src="https://files.catbox.moe/oa8lzh.png" style="height:300px;border-radius:6px;border:1px solid var(--border)"></div>
+                    </div>
+                    <div class="build-bar" id="build-bar-apex">
+                        <div class="build-item"><span class="build-icon">&#9660;</span><span class="label">Build</span><span class="val" id="build-hash-apex">Loading...</span></div>
+                        <div class="build-item"><span class="build-icon">&#9733;</span><span class="label">Target</span><span class="val" id="build-target-apex">r5apex_dx12.exe</span></div>
+                        <div class="build-item"><span class="build-icon">&#9776;</span><span class="label">Size</span><span class="val" id="build-size-apex">-</span></div>
+                        <div class="build-item"><span class="build-icon">&#9650;</span><span class="label">Released</span><span class="val" id="build-date-apex">-</span></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px" id="apex-stats-grid"></div>
+                    <div style="margin-bottom:16px"><button onclick="exportApexDump()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Export Dump</button></div>
+                </div>
+            </div>
+            <!-- OFFSETS -->
+            <div class="panel" id="panel-offsets">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                    <div style="color:var(--fg2);font-size:12px;flex:1">Memory offsets for UE4/UE5 internal structures. Base offsets for navigating the engine at runtime.</div>
+                    <button onclick="copyOffsets()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Copy Offsets</button>
+                    <button onclick="exportOffsets()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Export Offsets</button>
+                </div>
+                <div class="offset-group">
+<div class="offset-ns">Offsets</div>
+<div class="offset-entry"><span class="offset-name">GNames</span><span class="offset-val">0x1b085580 <button class="copy-btn" onclick="copyVal(this,'0x1b085580')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GObjectsChunks</span><span class="offset-val">0x1b162f78 <button class="copy-btn" onclick="copyVal(this,'0x1b162f78')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GObjectsNum</span><span class="offset-val">0x1b162f80 <button class="copy-btn" onclick="copyVal(this,'0x1b162f80')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GEngine</span><span class="offset-val">0x1b1d2c68 <button class="copy-btn" onclick="copyVal(this,'0x1b1d2c68')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GWorld</span><span class="offset-val">0x1b1d12f8 <button class="copy-btn" onclick="copyVal(this,'0x1b1d12f8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GetWorldVft</span><span class="offset-val">0x168 <button class="copy-btn" onclick="copyVal(this,'0x168')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">NamePoolBlocks</span><span class="offset-val">0x10 <button class="copy-btn" onclick="copyVal(this,'0x10')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">UObject</div>
+<div class="offset-entry"><span class="offset-name">ObjectFlags</span><span class="offset-val">0x10 <button class="copy-btn" onclick="copyVal(this,'0x10')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">InternalIndex</span><span class="offset-val">0x14 <button class="copy-btn" onclick="copyVal(this,'0x14')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Class</span><span class="offset-val">0x20 <button class="copy-btn" onclick="copyVal(this,'0x20')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Name</span><span class="offset-val">0x18 <button class="copy-btn" onclick="copyVal(this,'0x18')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Outer</span><span class="offset-val">0x8 <button class="copy-btn" onclick="copyVal(this,'0x8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Size</span><span class="offset-val">0x28 <button class="copy-btn" onclick="copyVal(this,'0x28')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FField</div>
+<div class="offset-entry"><span class="offset-name">Class</span><span class="offset-val">0x18 <button class="copy-btn" onclick="copyVal(this,'0x18')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Next</span><span class="offset-val">0x20 <button class="copy-btn" onclick="copyVal(this,'0x20')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Name</span><span class="offset-val">0x10 <button class="copy-btn" onclick="copyVal(this,'0x10')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Flags</span><span class="offset-val">0x30 <button class="copy-btn" onclick="copyVal(this,'0x30')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ArrayDim</span><span class="offset-val">0x28 <button class="copy-btn" onclick="copyVal(this,'0x28')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ElementSize</span><span class="offset-val">0x2C <button class="copy-btn" onclick="copyVal(this,'0x2C')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PropertyFlags</span><span class="offset-val">0x50 <button class="copy-btn" onclick="copyVal(this,'0x50')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Offset</span><span class="offset-val">0x64 <button class="copy-btn" onclick="copyVal(this,'0x64')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Size</span><span class="offset-val">0x68 <button class="copy-btn" onclick="copyVal(this,'0x68')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">UStruct</div>
+<div class="offset-entry"><span class="offset-name">Super</span><span class="offset-val">0x40 <button class="copy-btn" onclick="copyVal(this,'0x40')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Children</span><span class="offset-val">0x58 <button class="copy-btn" onclick="copyVal(this,'0x58')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ChildProperties</span><span class="offset-val">0x88 <button class="copy-btn" onclick="copyVal(this,'0x88')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PropertySpanArray</span><span class="offset-val">0x168 <button class="copy-btn" onclick="copyVal(this,'0x168')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PropertiesSize</span><span class="offset-val">0x50 <button class="copy-btn" onclick="copyVal(this,'0x50')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">MinAlignment</span><span class="offset-val">0x56 <button class="copy-btn" onclick="copyVal(this,'0x56')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">UClass</div>
+<div class="offset-entry"><span class="offset-name">ClassDefaultObject</span><span class="offset-val">0xB0 <button class="copy-btn" onclick="copyVal(this,'0xB0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">UFunction</div>
+<div class="offset-entry"><span class="offset-name">FunctionFlags</span><span class="offset-val">0x0 <button class="copy-btn" onclick="copyVal(this,'0x0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ParmsSize</span><span class="offset-val">0x0 <button class="copy-btn" onclick="copyVal(this,'0x0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ReturnValueOffset</span><span class="offset-val">0x0 <button class="copy-btn" onclick="copyVal(this,'0x0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Func</span><span class="offset-val">0xD8 <button class="copy-btn" onclick="copyVal(this,'0xD8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">UEnum</div>
+<div class="offset-entry"><span class="offset-name">Names</span><span class="offset-val">0x40 <button class="copy-btn" onclick="copyVal(this,'0x40')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Values</span><span class="offset-val">0x48 <button class="copy-btn" onclick="copyVal(this,'0x48')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Count</span><span class="offset-val">0x50 <button class="copy-btn" onclick="copyVal(this,'0x50')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Scoped</span><span class="offset-val">0x58 <button class="copy-btn" onclick="copyVal(this,'0x58')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">NameIndexSize</span><span class="offset-val">0x4 <button class="copy-btn" onclick="copyVal(this,'0x4')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">World</div>
+<div class="offset-entry"><span class="offset-name">PersistentLevel</span><span class="offset-val">0x38 <button class="copy-btn" onclick="copyVal(this,'0x38')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">OwningGameInstance</span><span class="offset-val">0x248 <button class="copy-btn" onclick="copyVal(this,'0x248')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GameState</span><span class="offset-val">0x1D0 <button class="copy-btn" onclick="copyVal(this,'0x1D0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AuthorityGameMode</span><span class="offset-val">0x1C8 <button class="copy-btn" onclick="copyVal(this,'0x1C8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Levels</span><span class="offset-val">0x1E8 <button class="copy-btn" onclick="copyVal(this,'0x1E8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">NetDriver</span><span class="offset-val">0x40 <button class="copy-btn" onclick="copyVal(this,'0x40')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">GameInstance</div>
+<div class="offset-entry"><span class="offset-name">LocalPlayers</span><span class="offset-val">0x38 <button class="copy-btn" onclick="copyVal(this,'0x38')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">GameEngine</div>
+<div class="offset-entry"><span class="offset-name">GameInstance</span><span class="offset-val">0x1100 <button class="copy-btn" onclick="copyVal(this,'0x1100')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">Engine</div>
+<div class="offset-entry"><span class="offset-name">GameViewport</span><span class="offset-val">0xB70 <button class="copy-btn" onclick="copyVal(this,'0xB70')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GameUserSettings</span><span class="offset-val">0x278 <button class="copy-btn" onclick="copyVal(this,'0x278')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">GameViewportClient</div>
+<div class="offset-entry"><span class="offset-name">World</span><span class="offset-val">0x78 <button class="copy-btn" onclick="copyVal(this,'0x78')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GameInstance</span><span class="offset-val">0x80 <button class="copy-btn" onclick="copyVal(this,'0x80')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">Player</div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">LocalPlayer</div>
+<div class="offset-entry"><span class="offset-name">ViewportClient</span><span class="offset-val">0x78 <button class="copy-btn" onclick="copyVal(this,'0x78')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ControllerId</span><span class="offset-val">0xE8 <button class="copy-btn" onclick="copyVal(this,'0xE8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">PlayerController</div>
+<div class="offset-entry"><span class="offset-name">AcknowledgedPawn</span><span class="offset-val">0x318 <button class="copy-btn" onclick="copyVal(this,'0x318')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">MyHUD</span><span class="offset-val">0x320 <button class="copy-btn" onclick="copyVal(this,'0x320')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PlayerCameraManager</span><span class="offset-val">0x328 <button class="copy-btn" onclick="copyVal(this,'0x328')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PlayerInput</span><span class="offset-val">0x3E8 <button class="copy-btn" onclick="copyVal(this,'0x3E8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">SpectatorPawn</span><span class="offset-val">0x640 <button class="copy-btn" onclick="copyVal(this,'0x640')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">Controller</div>
+<div class="offset-entry"><span class="offset-name">PlayerState</span><span class="offset-val">0x278 <button class="copy-btn" onclick="copyVal(this,'0x278')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Pawn</span><span class="offset-val">0x2B0 <button class="copy-btn" onclick="copyVal(this,'0x2B0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Character</span><span class="offset-val">0x2C0 <button class="copy-btn" onclick="copyVal(this,'0x2C0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ControlRotation</span><span class="offset-val">0x2E8 <button class="copy-btn" onclick="copyVal(this,'0x2E8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">Pawn</div>
+<div class="offset-entry"><span class="offset-name">PlayerState</span><span class="offset-val">0x290 <button class="copy-btn" onclick="copyVal(this,'0x290')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Controller</span><span class="offset-val">0x2A0 <button class="copy-btn" onclick="copyVal(this,'0x2A0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">Character</div>
+<div class="offset-entry"><span class="offset-name">Mesh</span><span class="offset-val">0x2F0 <button class="copy-btn" onclick="copyVal(this,'0x2F0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CharacterMovement</span><span class="offset-val">0x2F8 <button class="copy-btn" onclick="copyVal(this,'0x2F8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CapsuleComponent</span><span class="offset-val">0x300 <button class="copy-btn" onclick="copyVal(this,'0x300')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">Actor</div>
+<div class="offset-entry"><span class="offset-name">Owner</span><span class="offset-val">0x158 <button class="copy-btn" onclick="copyVal(this,'0x158')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Instigator</span><span class="offset-val">0x198 <button class="copy-btn" onclick="copyVal(this,'0x198')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">RootComponent</span><span class="offset-val">0x1B0 <button class="copy-btn" onclick="copyVal(this,'0x1B0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Children</span><span class="offset-val">0x1A0 <button class="copy-btn" onclick="copyVal(this,'0x1A0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ReplicatedMovement</span><span class="offset-val">0xD0 <button class="copy-btn" onclick="copyVal(this,'0xD0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">RemoteRole</span><span class="offset-val">0x60 <button class="copy-btn" onclick="copyVal(this,'0x60')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Role</span><span class="offset-val">0x164 <button class="copy-btn" onclick="copyVal(this,'0x164')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CustomTimeDilation</span><span class="offset-val">0x68 <button class="copy-btn" onclick="copyVal(this,'0x68')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bHidden</span><span class="offset-val">0xC3 <button class="copy-btn" onclick="copyVal(this,'0xC3')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bHiddenMask</span><span class="offset-val">0x80 <button class="copy-btn" onclick="copyVal(this,'0x80')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Tags</span><span class="offset-val">0x1F0 <button class="copy-btn" onclick="copyVal(this,'0x1F0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">WorldPrivate</span><span class="offset-val">0xB0 <button class="copy-btn" onclick="copyVal(this,'0xB0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">PlayerCameraManager</div>
+<div class="offset-entry"><span class="offset-name">PCOwner</span><span class="offset-val">0x270 <button class="copy-btn" onclick="copyVal(this,'0x270')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ViewTarget</span><span class="offset-val">0x300 <button class="copy-btn" onclick="copyVal(this,'0x300')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CameraCachePrivate</span><span class="offset-val">0x1590 <button class="copy-btn" onclick="copyVal(this,'0x1590')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">TransformComponent</span><span class="offset-val">0x278 <button class="copy-btn" onclick="copyVal(this,'0x278')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">SceneComponent</div>
+<div class="offset-entry"><span class="offset-name">RelativeLocation</span><span class="offset-val">0x140 <button class="copy-btn" onclick="copyVal(this,'0x140')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">RelativeRotation</span><span class="offset-val">0x158 <button class="copy-btn" onclick="copyVal(this,'0x158')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">RelativeScale3D</span><span class="offset-val">0x170 <button class="copy-btn" onclick="copyVal(this,'0x170')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ComponentVelocity</span><span class="offset-val">0x188 <button class="copy-btn" onclick="copyVal(this,'0x188')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AttachParent</span><span class="offset-val">0xD0 <button class="copy-btn" onclick="copyVal(this,'0xD0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AttachChildren</span><span class="offset-val">0xE0 <button class="copy-btn" onclick="copyVal(this,'0xE0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AttachSocketName</span><span class="offset-val">0xD8 <button class="copy-btn" onclick="copyVal(this,'0xD8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">PlayerState</div>
+<div class="offset-entry"><span class="offset-name">PawnPrivate</span><span class="offset-val">0x2E8 <button class="copy-btn" onclick="copyVal(this,'0x2E8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PlayerNamePrivate</span><span class="offset-val">0x308 <button class="copy-btn" onclick="copyVal(this,'0x308')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Score</span><span class="offset-val">0x270 <button class="copy-btn" onclick="copyVal(this,'0x270')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CompressedPing</span><span class="offset-val">0x278 <button class="copy-btn" onclick="copyVal(this,'0x278')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsABot</span><span class="offset-val">0x27D <button class="copy-btn" onclick="copyVal(this,'0x27D')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsABotMask</span><span class="offset-val">0x8 <button class="copy-btn" onclick="copyVal(this,'0x8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsSpectator</span><span class="offset-val">0x27D <button class="copy-btn" onclick="copyVal(this,'0x27D')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsSpectatorMask</span><span class="offset-val">0x2 <button class="copy-btn" onclick="copyVal(this,'0x2')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">Level</div>
+<div class="offset-entry"><span class="offset-name">OwningWorld</span><span class="offset-val">0xE0 <button class="copy-btn" onclick="copyVal(this,'0xE0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">WorldSettings</span><span class="offset-val">0x2B8 <button class="copy-btn" onclick="copyVal(this,'0x2B8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">PrimitiveComponent</div>
+<div class="offset-entry"><span class="offset-name">BoundsScale</span><span class="offset-val">0x350 <button class="copy-btn" onclick="copyVal(this,'0x350')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CustomDepthStencilValue</span><span class="offset-val">0x2D0 <button class="copy-btn" onclick="copyVal(this,'0x2D0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">SkinnedMeshComponent</div>
+<div class="offset-entry"><span class="offset-name">SkeletalMesh</span><span class="offset-val">0x5E8 <button class="copy-btn" onclick="copyVal(this,'0x5E8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">SkinnedAsset</span><span class="offset-val">0x5F0 <button class="copy-btn" onclick="copyVal(this,'0x5F0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">LeaderPoseComponent</span><span class="offset-val">0x5F8 <button class="copy-btn" onclick="copyVal(this,'0x5F8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">SkeletalMeshComponent</div>
+<div class="offset-entry"><span class="offset-name">AnimScriptInstance</span><span class="offset-val">0x920 <button class="copy-btn" onclick="copyVal(this,'0x920')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AnimClass</span><span class="offset-val">0x918 <button class="copy-btn" onclick="copyVal(this,'0x918')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">MovementComponent</div>
+<div class="offset-entry"><span class="offset-name">Velocity</span><span class="offset-val">0xD8 <button class="copy-btn" onclick="copyVal(this,'0xD8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">UpdatedComponent</span><span class="offset-val">0xC0 <button class="copy-btn" onclick="copyVal(this,'0xC0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">CharacterMovementComponent</div>
+<div class="offset-entry"><span class="offset-name">MovementMode</span><span class="offset-val">0x231 <button class="copy-btn" onclick="copyVal(this,'0x231')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CustomMovementMode</span><span class="offset-val">0x232 <button class="copy-btn" onclick="copyVal(this,'0x232')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">MaxWalkSpeed</span><span class="offset-val">0x278 <button class="copy-btn" onclick="copyVal(this,'0x278')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">MaxWalkSpeedCrouched</span><span class="offset-val">0x27C <button class="copy-btn" onclick="copyVal(this,'0x27C')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">MaxSwimSpeed</span><span class="offset-val">0x280 <button class="copy-btn" onclick="copyVal(this,'0x280')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">MaxFlySpeed</span><span class="offset-val">0x284 <button class="copy-btn" onclick="copyVal(this,'0x284')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">JumpZVelocity</span><span class="offset-val">0x1A8 <button class="copy-btn" onclick="copyVal(this,'0x1A8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GravityScale</span><span class="offset-val">0x1A0 <button class="copy-btn" onclick="copyVal(this,'0x1A0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Acceleration</span><span class="offset-val">0x328 <button class="copy-btn" onclick="copyVal(this,'0x328')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bWantsToCrouch</span><span class="offset-val">0x5F6 <button class="copy-btn" onclick="copyVal(this,'0x5F6')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bWantsToCrouchMask</span><span class="offset-val">0x40 <button class="copy-btn" onclick="copyVal(this,'0x40')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">GameStateBase</div>
+<div class="offset-entry"><span class="offset-name">PlayerArray</span><span class="offset-val">0x288 <button class="copy-btn" onclick="copyVal(this,'0x288')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GameModeClass</span><span class="offset-val">0x270 <button class="copy-btn" onclick="copyVal(this,'0x270')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AuthorityGameMode</span><span class="offset-val">0x278 <button class="copy-btn" onclick="copyVal(this,'0x278')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ServerWorldTimeSecondsDelta</span><span class="offset-val">0x2A8 <button class="copy-btn" onclick="copyVal(this,'0x2A8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPawn</div>
+<div class="offset-entry"><span class="offset-name">CurrentWeapon</span><span class="offset-val">0x9D0 <button class="copy-btn" onclick="copyVal(this,'0x9D0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CurrentWeaponList</span><span class="offset-val">0xA08 <button class="copy-btn" onclick="copyVal(this,'0xA08')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">HealthSet</span><span class="offset-val">0x13A8 <button class="copy-btn" onclick="copyVal(this,'0x13A8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsDying</span><span class="offset-val">0x798 <button class="copy-btn" onclick="copyVal(this,'0x798')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsDyingMask</span><span class="offset-val">0x20 <button class="copy-btn" onclick="copyVal(this,'0x20')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsDBNO</span><span class="offset-val">0x8F3 <button class="copy-btn" onclick="copyVal(this,'0x8F3')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsDBNOMask</span><span class="offset-val">0x80 <button class="copy-btn" onclick="copyVal(this,'0x80')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsInvulnerable</span><span class="offset-val">0x79B <button class="copy-btn" onclick="copyVal(this,'0x79B')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsInvulnerableMask</span><span class="offset-val">0x4 <button class="copy-btn" onclick="copyVal(this,'0x4')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bWeaponActivated</span><span class="offset-val">0x7C9 <button class="copy-btn" onclick="copyVal(this,'0x7C9')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bWeaponActivatedMask</span><span class="offset-val">0x8 <button class="copy-btn" onclick="copyVal(this,'0x8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bWeaponHolstered</span><span class="offset-val">0x8DA <button class="copy-btn" onclick="copyVal(this,'0x8DA')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bWeaponHolsteredMask</span><span class="offset-val">0x20 <button class="copy-btn" onclick="copyVal(this,'0x20')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsSliding</span><span class="offset-val">0x7C9 <button class="copy-btn" onclick="copyVal(this,'0x7C9')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsSlidingMask</span><span class="offset-val">0x40 <button class="copy-btn" onclick="copyVal(this,'0x40')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsSkating</span><span class="offset-val">0x7C9 <button class="copy-btn" onclick="copyVal(this,'0x7C9')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsSkatingMask</span><span class="offset-val">0x80 <button class="copy-btn" onclick="copyVal(this,'0x80')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bSpotted</span><span class="offset-val">0x79B <button class="copy-btn" onclick="copyVal(this,'0x79B')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bSpottedMask</span><span class="offset-val">0x8 <button class="copy-btn" onclick="copyVal(this,'0x8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bPrimaryInputHeld</span><span class="offset-val">0x7C9 <button class="copy-btn" onclick="copyVal(this,'0x7C9')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bPrimaryInputHeldMask</span><span class="offset-val">0x1 <button class="copy-btn" onclick="copyVal(this,'0x1')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bSecondaryInputHeld</span><span class="offset-val">0x7C9 <button class="copy-btn" onclick="copyVal(this,'0x7C9')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bSecondaryInputHeldMask</span><span class="offset-val">0x2 <button class="copy-btn" onclick="copyVal(this,'0x2')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPlayerPawn</div>
+<div class="offset-entry"><span class="offset-name">CurrentVehicle</span><span class="offset-val">0x2C30 <button class="copy-btn" onclick="copyVal(this,'0x2C30')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsTargeting</span><span class="offset-val">0x2152 <button class="copy-btn" onclick="copyVal(this,'0x2152')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsTargetingMask</span><span class="offset-val">0x2 <button class="copy-btn" onclick="copyVal(this,'0x2')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsTacticalSprinting</span><span class="offset-val">0x2150 <button class="copy-btn" onclick="copyVal(this,'0x2150')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsTacticalSprintingMask</span><span class="offset-val">0x80 <button class="copy-btn" onclick="copyVal(this,'0x80')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">BuildingState</span><span class="offset-val">0x2090 <button class="copy-btn" onclick="copyVal(this,'0x2090')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CurrentPawnSquaredSpeed</span><span class="offset-val">0x2200 <button class="copy-btn" onclick="copyVal(this,'0x2200')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPlayerPawnAthena</div>
+<div class="offset-entry"><span class="offset-name">ReviveFromDBNOTime</span><span class="offset-val">0x4B38 <button class="copy-btn" onclick="copyVal(this,'0x4B38')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">DBNOStartTime</span><span class="offset-val">0x4B40 <button class="copy-btn" onclick="copyVal(this,'0x4B40')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">DeathTime</span><span class="offset-val">0x4B60 <button class="copy-btn" onclick="copyVal(this,'0x4B60')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortHealthSet</div>
+<div class="offset-entry"><span class="offset-name">Health</span><span class="offset-val">0x48 <button class="copy-btn" onclick="copyVal(this,'0x48')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">MaxHealth</span><span class="offset-val">0x70 <button class="copy-btn" onclick="copyVal(this,'0x70')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Shield</span><span class="offset-val">0x98 <button class="copy-btn" onclick="copyVal(this,'0x98')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CurrentShield</span><span class="offset-val">0xC0 <button class="copy-btn" onclick="copyVal(this,'0xC0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortWeapon</div>
+<div class="offset-entry"><span class="offset-name">WeaponData</span><span class="offset-val">0x6D0 <button class="copy-btn" onclick="copyVal(this,'0x6D0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CosmeticOverrideWeaponData</span><span class="offset-val">0x6D8 <button class="copy-btn" onclick="copyVal(this,'0x6D8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">LastFireTime</span><span class="offset-val">0x10C4 <button class="copy-btn" onclick="copyVal(this,'0x10C4')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">LastFireTimeVerified</span><span class="offset-val">0x10CC <button class="copy-btn" onclick="copyVal(this,'0x10CC')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AmmoCount</span><span class="offset-val">0x11C0 <button class="copy-btn" onclick="copyVal(this,'0x11C0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">TimeToEquip</span><span class="offset-val">0x344 <button class="copy-btn" onclick="copyVal(this,'0x344')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsReloadingWeapon</span><span class="offset-val">0x415 <button class="copy-btn" onclick="copyVal(this,'0x415')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsReloadingWeaponMask</span><span class="offset-val">0x1 <button class="copy-btn" onclick="copyVal(this,'0x1')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsEquippingWeapon</span><span class="offset-val">0x3C7 <button class="copy-btn" onclick="copyVal(this,'0x3C7')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsEquippingWeaponMask</span><span class="offset-val">0xFF <button class="copy-btn" onclick="copyVal(this,'0xFF')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsChargingWeapon</span><span class="offset-val">0x43E <button class="copy-btn" onclick="copyVal(this,'0x43E')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bIsChargingWeaponMask</span><span class="offset-val">0xFF <button class="copy-btn" onclick="copyVal(this,'0xFF')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">FireModeOverride</span><span class="offset-val">0x780 <button class="copy-btn" onclick="copyVal(this,'0x780')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">WeaponCoreAnimation</span><span class="offset-val">0x1740 <button class="copy-btn" onclick="copyVal(this,'0x1740')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortWeaponRanged</div>
+<div class="offset-entry"><span class="offset-name">LastFiredInterval</span><span class="offset-val">0x2508 <button class="copy-btn" onclick="copyVal(this,'0x2508')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CachedAimPoint</span><span class="offset-val">0x27E8 <button class="copy-btn" onclick="copyVal(this,'0x27E8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">RecoilProcessingShotCounter</span><span class="offset-val">0x25A4 <button class="copy-btn" onclick="copyVal(this,'0x25A4')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortItemDefinition</div>
+<div class="offset-entry"><span class="offset-name">ItemType</span><span class="offset-val">0x98 <button class="copy-btn" onclick="copyVal(this,'0x98')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortWeaponItemDefinition</div>
+<div class="offset-entry"><span class="offset-name">WeaponActorClass</span><span class="offset-val">0xC0 <button class="copy-btn" onclick="copyVal(this,'0xC0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">WeaponStatHandle</span><span class="offset-val">0x128 <button class="copy-btn" onclick="copyVal(this,'0x128')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PrimaryFireAbility</span><span class="offset-val">0x1B0 <button class="copy-btn" onclick="copyVal(this,'0x1B0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">SecondaryFireAbility</span><span class="offset-val">0x1F0 <button class="copy-btn" onclick="copyVal(this,'0x1F0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPlayerState</div>
+<div class="offset-entry"><span class="offset-name">Platform</span><span class="offset-val">0x400 <button class="copy-btn" onclick="copyVal(this,'0x400')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PlayerTeam</span><span class="offset-val">0x648 <button class="copy-btn" onclick="copyVal(this,'0x648')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PlayerTeamPrivate</span><span class="offset-val">0x650 <button class="copy-btn" onclick="copyVal(this,'0x650')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PlatformUniqueNetId</span><span class="offset-val">0x938 <button class="copy-btn" onclick="copyVal(this,'0x938')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PlayerOSSName</span><span class="offset-val">0x920 <button class="copy-btn" onclick="copyVal(this,'0x920')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPlayerStateAthena</div>
+<div class="offset-entry"><span class="offset-name">TeamIndex</span><span class="offset-val">0xF69 <button class="copy-btn" onclick="copyVal(this,'0xF69')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">SquadId</span><span class="offset-val">0x10C4 <button class="copy-btn" onclick="copyVal(this,'0x10C4')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">KillScore</span><span class="offset-val">0xF80 <button class="copy-btn" onclick="copyVal(this,'0xF80')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">TeamKillScore</span><span class="offset-val">0xF44 <button class="copy-btn" onclick="copyVal(this,'0xF44')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Place</span><span class="offset-val">0xF78 <button class="copy-btn" onclick="copyVal(this,'0xF78')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">TeamScore</span><span class="offset-val">0xF70 <button class="copy-btn" onclick="copyVal(this,'0xF70')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortTeamInfo</div>
+<div class="offset-entry"><span class="offset-name">TeamMembers</span><span class="offset-val">0x278 <button class="copy-btn" onclick="copyVal(this,'0x278')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">Team</span><span class="offset-val">0x288 <button class="copy-btn" onclick="copyVal(this,'0x288')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPlayerController</div>
+<div class="offset-entry"><span class="offset-name">AimHelpMode</span><span class="offset-val">0x21E0 <button class="copy-btn" onclick="copyVal(this,'0x21E0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">AimAssistOffset</span><span class="offset-val">0x22F0 <button class="copy-btn" onclick="copyVal(this,'0x22F0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPlayerControllerAthena</div>
+<div class="offset-entry"><span class="offset-name">SwappingItemDefinition</span><span class="offset-val">0x3868 <button class="copy-btn" onclick="copyVal(this,'0x3868')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortPickup</div>
+<div class="offset-entry"><span class="offset-name">PrimaryPickupItemEntry</span><span class="offset-val">0x368 <button class="copy-btn" onclick="copyVal(this,'0x368')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bPickedUp</span><span class="offset-val">0x29C <button class="copy-btn" onclick="copyVal(this,'0x29C')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bPickedUpMask</span><span class="offset-val">0x4 <button class="copy-btn" onclick="copyVal(this,'0x4')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">PickupLocationData</span><span class="offset-val">0x410 <button class="copy-btn" onclick="copyVal(this,'0x410')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortItemEntry</div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortGameStateAthena</div>
+<div class="offset-entry"><span class="offset-name">PlayersLeft</span><span class="offset-val">0x1620 <button class="copy-btn" onclick="copyVal(this,'0x1620')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">TeamsLeft</span><span class="offset-val">0x1700 <button class="copy-btn" onclick="copyVal(this,'0x1700')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CurrentPlaylistId</span><span class="offset-val">0x1A10 <button class="copy-btn" onclick="copyVal(this,'0x1A10')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">CurrentPlaylistInfo</span><span class="offset-val">0x21E8 <button class="copy-btn" onclick="copyVal(this,'0x21E8')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">BuildingActor</div>
+<div class="offset-entry"><span class="offset-name">Team</span><span class="offset-val">0x44A <button class="copy-btn" onclick="copyVal(this,'0x44A')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">TeamIndex</span><span class="offset-val">0x44B <button class="copy-btn" onclick="copyVal(this,'0x44B')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bPlayerPlaced</span><span class="offset-val">0x4A1 <button class="copy-btn" onclick="copyVal(this,'0x4A1')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bPlayerPlacedMask</span><span class="offset-val">0x40 <button class="copy-btn" onclick="copyVal(this,'0x40')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">BuildingContainer</div>
+<div class="offset-entry"><span class="offset-name">bAlreadySearched</span><span class="offset-val">0xCEB <button class="copy-btn" onclick="copyVal(this,'0xCEB')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">bAlreadySearchedMask</span><span class="offset-val">0x10 <button class="copy-btn" onclick="copyVal(this,'0x10')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">SearchLootTierGroup</span><span class="offset-val">0xBA0 <button class="copy-btn" onclick="copyVal(this,'0xBA0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ReplicatedLootTier</span><span class="offset-val">0xBC0 <button class="copy-btn" onclick="copyVal(this,'0xBC0')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">FortAthenaVehicle</div>
+</div>
+            </div>
+
+            <!-- DECRYPTS -->
+            <div class="panel" id="panel-decrypts">
+                <div style="margin-bottom:16px;color:var(--fg2);font-size:12px">Decryption routines and keys for Fortnite's encrypted name/object tables.</div>
+                <div class="code-block" style="margin-bottom:12px">
+<div class="header">Decrypts/Common.hpp</div>
+<pre>#pragma once
+
+#include &lt;cstdint&gt;
+#include &lt;cstddef&gt;
+#include &lt;functional&gt;
+
+namespace Decrypt {
+
+using ReadFn = std::function&lt;bool(uint64_t addr, void* buf, size_t size)&gt;;
+
+inline uint32_t Rol32(uint32_t x, uint32_t n)
+{
+    n &amp;= 31;
+    return n ? (x &lt;&lt; n) | (x &gt;&gt; (32 - n)) : x;
+}
+
+inline uint64_t Rol64(uint64_t x, uint32_t n)
+{
+    n &amp;= 63;
+    return n ? (x &lt;&lt; n) | (x &gt;&gt; (64 - n)) : x;
+}
+
+inline uint8_t Rol8(uint8_t x, uint32_t n)
+{
+    n &amp;= 7;
+    return n ? (uint8_t)((x &lt;&lt; n) | (x &gt;&gt; (8 - n))) : x;
+}
+
+template&lt;typename T&gt;
+inline T Read(const ReadFn&amp; rd, uint64_t addr)
+{
+    T v{};
+    rd(addr, &amp;v, sizeof(T));
+    return v;
+}
+
+inline bool PtrOk(uint64_t p)
+{
+    p &amp;= ~1ull;
+    return p &gt;= 0x10000 &amp;&amp; p &lt; 0x00007FFFFFFFFFFFull;
+}
+
+}
+</pre>
+</div>
+<div class="code-block" style="margin-bottom:12px">
+<div class="header">Decrypts/Decrypts.hpp</div>
+<pre>#pragma once
+#include &quot;GNames.hpp&quot;
+#include &quot;GObjects.hpp&quot;
+#include &quot;GWorld.hpp&quot;
+</pre>
+</div>
+<div class="code-block" style="margin-bottom:12px">
+<div class="header">Decrypts/GNames.hpp</div>
+<pre>#pragma once
+
+#include &lt;string&gt;
+#include &quot;Common.hpp&quot;
+
+namespace Decrypt::GNames {
+
+constexpr uint32_t PoolRva    = 0x1B085580;
+constexpr uint32_t BlocksOff  = 0x10;
+constexpr uint32_t UObjectNameOff = 0x18;
+
+inline uint32_t Bswap32(uint32_t x)
+{
+    return (x &lt;&lt; 24) | ((x &lt;&lt; 8) &amp; 0x00FF0000u) | ((x &gt;&gt; 8) &amp; 0x0000FF00u) | (x &gt;&gt; 24);
+}
+
+inline uint32_t DecodeIndex(uint32_t enc)
+{
+    if (!enc)
+        return 0;
+    const uint32_t t = Bswap32(enc - 1) + 0x2C11B315u;
+    return t ? t : 0x2C11B314u;
+}
+
+inline uint32_t Seed(uint32_t len)
+{
+    const uint32_t hi = (len &lt;&lt; 20) + len;
+    const uint32_t m = len * 0x22CEu + 0xE2852u;
+    return hi + (m ^ (m &gt;&gt; 11));
+}
+
+inline void DecryptBytes(const uint8_t* in, uint8_t* out, uint32_t len, uint32_t seed)
+{
+    uint32_t st = seed;
+    for (uint32_t i = 0; i &lt; len; ++i) {
+        uint32_t mixed = st * 0x22CEu + 0xE2852u;
+        mixed ^= mixed &gt;&gt; 11;
+        st = (Rol32(st, 20) ^ st) + mixed;
+        out[len - 1 - i] = (uint8_t)(in[i] + (uint8_t)st + 0x23u);
+    }
+}
+
+inline std::string GetName(const ReadFn&amp; rd, uint64_t base, uint32_t id, int depth = 0)
+{
+    if (depth &gt; 8)
+        return {};
+    const uint64_t chunk = Read&lt;uint64_t&gt;(rd, base + PoolRva + BlocksOff + (uint64_t)(id &gt;&gt; 16) * 8);
+    if (!PtrOk(chunk))
+        return {};
+    const uint64_t entry = chunk + (uint64_t)(id &amp; 0xFFFF) * 2;
+    const uint16_t header = Read&lt;uint16_t&gt;(rd, entry);
+    const uint32_t len = (header &amp; 0x3FF) ^ 0x266u;
+    const bool wide = (header &amp; 0x8000) != 0;
+    if (!len) {
+        const uint32_t redir = DecodeIndex(Read&lt;uint32_t&gt;(rd, entry + 6));
+        if (!redir || redir == id)
+            return {};
+        return GetName(rd, base, redir, depth + 1);
+    }
+    if (len &gt; 256)
+        return {};
+    const uint32_t bytes = wide ? len * 2 : len;
+    uint8_t raw[512], dec[512];
+    if (!rd(entry + 2, raw, bytes))
+        return {};
+    DecryptBytes(raw, dec, bytes, Seed(len));
+    std::string s;
+    if (wide) {
+        for (uint32_t i = 0; i + 1 &lt; bytes; i += 2) {
+            const uint16_t c = (uint16_t)(dec[i] | (dec[i + 1] &lt;&lt; 8));
+            if (!c)
+                break;
+            s.push_back((c &gt;= 32 &amp;&amp; c &lt; 127) ? (char)c : &#x27;?&#x27;);
+        }
+    } else {
+        for (uint32_t i = 0; i &lt; len; ++i) {
+            if (!dec[i])
+                break;
+            s.push_back((dec[i] &gt;= 32 &amp;&amp; dec[i] &lt; 127) ? (char)dec[i] : &#x27;?&#x27;);
+        }
+    }
+    return s;
+}
+
+inline std::string GetObjectName(const ReadFn&amp; rd, uint64_t base, uint64_t object)
+{
+    const uint32_t enc = Read&lt;uint32_t&gt;(rd, object + UObjectNameOff);
+    return GetName(rd, base, DecodeIndex(enc));
+}
+
+}
+</pre>
+</div>
+<div class="code-block" style="margin-bottom:12px">
+<div class="header">Decrypts/GObjects.hpp</div>
+<pre>#pragma once
+
+#include &quot;Common.hpp&quot;
+
+namespace Decrypt::GObjects {
+
+constexpr uint32_t ChunksRva   = 0x1B162F78;
+constexpr uint32_t NumRva      = 0x1B162F80;
+constexpr uint32_t ItemSize    = 0x18;
+constexpr uint32_t ItemSerial  = 0xC;
+constexpr uint32_t UObjectIndexOff = 0x14;
+
+inline uint32_t Bswap32(uint32_t x)
+{
+    return (x &lt;&lt; 24) | ((x &lt;&lt; 8) &amp; 0x00FF0000u) | ((x &gt;&gt; 8) &amp; 0x0000FF00u) | (x &gt;&gt; 24);
+}
+
+inline uint64_t Bswap64(uint64_t x)
+{
+    return ((uint64_t)Bswap32((uint32_t)x) &lt;&lt; 32) | Bswap32((uint32_t)(x &gt;&gt; 32));
+}
+
+inline uint64_t DecodeChunks(uint64_t enc)
+{
+    return Bswap64(enc) + 0x894E7C7Full;
+}
+
+inline int32_t DecodeNum(uint32_t enc)
+{
+    return (int32_t)(Bswap32(enc) + 0xEBB16CECu);
+}
+
+inline uint64_t DecodeItem(uint64_t packed, uint32_t enc32)
+{
+    if (packed &amp; 0x1020000000000000ull)
+        return 0;
+    const uint32_t low = Bswap32(enc32) + 0x7765FD7Cu;
+    return ((packed &amp; 0x3FFF00000000ull) | low) &lt;&lt; 3;
+}
+
+inline uint32_t DecodeObjectIndex(uint32_t enc)
+{
+    return Bswap32(enc) + 0x0887FA0Fu;
+}
+
+struct Table {
+    uint64_t chunks = 0;
+    int32_t num = 0;
+};
+
+inline Table Load(const ReadFn&amp; rd, uint64_t base)
+{
+    Table t;
+    t.chunks = DecodeChunks(Read&lt;uint64_t&gt;(rd, base + ChunksRva));
+    t.num = DecodeNum(Read&lt;uint32_t&gt;(rd, base + NumRva));
+    return t;
+}
+
+inline uint64_t GetObject(const ReadFn&amp; rd, const Table&amp; t, int32_t index)
+{
+    if (index &lt; 0 || index &gt;= t.num || !PtrOk(t.chunks))
+        return 0;
+    const uint64_t chunk = Read&lt;uint64_t&gt;(rd, t.chunks + (uint64_t)(index &gt;&gt; 16) * 8);
+    if (!PtrOk(chunk))
+        return 0;
+    const uint64_t item = chunk + (uint64_t)(index &amp; 0xFFFF) * ItemSize;
+    const uint64_t packed = Read&lt;uint64_t&gt;(rd, item);
+    const uint32_t enc32 = Read&lt;uint32_t&gt;(rd, item + 8);
+    const uint64_t obj = DecodeItem(packed, enc32);
+    if (!PtrOk(obj))
+        return 0;
+    if (DecodeObjectIndex(Read&lt;uint32_t&gt;(rd, obj + UObjectIndexOff)) != (uint32_t)index)
+        return 0;
+    return obj;
+}
+
+}
+</pre>
+</div>
+<div class="code-block" style="margin-bottom:12px">
+<div class="header">Decrypts/GWorld.hpp</div>
+<pre>#pragma once
+
+#include &quot;Common.hpp&quot;
+
+namespace Decrypt::GWorld {
+
+constexpr uint32_t Rva = 0x1B1D12F8;
+constexpr uint32_t GetWorldVftIndexOff = 0x168;
+
+inline uint64_t Bswap64(uint64_t x)
+{
+    const uint32_t lo = (uint32_t)x;
+    const uint32_t hi = (uint32_t)(x &gt;&gt; 32);
+    const uint32_t slo = (lo &lt;&lt; 24) | ((lo &lt;&lt; 8) &amp; 0x00FF0000u) | ((lo &gt;&gt; 8) &amp; 0x0000FF00u) | (lo &gt;&gt; 24);
+    const uint32_t shi = (hi &lt;&lt; 24) | ((hi &lt;&lt; 8) &amp; 0x00FF0000u) | ((hi &gt;&gt; 8) &amp; 0x0000FF00u) | (hi &gt;&gt; 24);
+    return ((uint64_t)slo &lt;&lt; 32) | shi;
+}
+
+inline uint64_t Decode(uint64_t enc)
+{
+    const uint64_t w = Bswap64(enc) + 0xC731F903ull;
+    return w ? w : 0;
+}
+
+inline uint64_t Get(const ReadFn&amp; rd, uint64_t base)
+{
+    const uint64_t w = Decode(Read&lt;uint64_t&gt;(rd, base + Rva));
+    return PtrOk(w) ? w : 0;
+}
+
+}
+</pre>
+</div>
+                <div style="margin-top:16px">
+                    <div style="font-size:11px;color:var(--fg2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Constants</div>
+                    <div class="offset-group">
+<div class="offset-ns">Common / Decrypt</div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">GNames / Decrypt</div>
+<div class="offset-entry"><span class="offset-name">PoolRva (uint32_t)</span><span class="offset-val">0x1B085580 <button class="copy-btn" onclick="copyVal(this,'0x1B085580')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">BlocksOff (uint32_t)</span><span class="offset-val">0x10 <button class="copy-btn" onclick="copyVal(this,'0x10')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">UObjectNameOff (uint32_t)</span><span class="offset-val">0x18 <button class="copy-btn" onclick="copyVal(this,'0x18')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">GObjects / Decrypt</div>
+<div class="offset-entry"><span class="offset-name">ChunksRva (uint32_t)</span><span class="offset-val">0x1B162F78 <button class="copy-btn" onclick="copyVal(this,'0x1B162F78')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">NumRva (uint32_t)</span><span class="offset-val">0x1B162F80 <button class="copy-btn" onclick="copyVal(this,'0x1B162F80')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ItemSize (uint32_t)</span><span class="offset-val">0x18 <button class="copy-btn" onclick="copyVal(this,'0x18')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">ItemSerial (uint32_t)</span><span class="offset-val">0xC <button class="copy-btn" onclick="copyVal(this,'0xC')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">UObjectIndexOff (uint32_t)</span><span class="offset-val">0x14 <button class="copy-btn" onclick="copyVal(this,'0x14')">copy</button></span></div>
+</div>
+<div class="offset-group">
+<div class="offset-ns">GWorld / Decrypt</div>
+<div class="offset-entry"><span class="offset-name">Rva (uint32_t)</span><span class="offset-val">0x1B1D12F8 <button class="copy-btn" onclick="copyVal(this,'0x1B1D12F8')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GetWorldVftIndexOff (uint32_t)</span><span class="offset-val">0x168 <button class="copy-btn" onclick="copyVal(this,'0x168')">copy</button></span></div>
+</div>
+                </div>
+            </div>
+
+            <!-- NAMES -->
+            <div class="panel" id="panel-names">
+                <div class="dump-controls">
+                    <input type="text" id="name-search" placeholder="Search names..." oninput="namePage=1;filterNames()">
+                    <button onclick="namePage=1;filterNames()">Reset</button>
+                    <button onclick="exportNames()" style="margin-left:auto">Export Names</button>
+                </div>
+                <div id="name-count" class="sdk-count"></div>
+                <div style="overflow-x:auto">
+                    <table class="dump-table">
+                        <thead><tr><th>Index</th><th>Name</th></tr></thead>
+                        <tbody id="name-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="name-pagination"></div>
+            </div>
+
+            <!-- FUNCTIONS -->
+            <div class="panel" id="panel-functions">
+                <div class="dump-controls">
+                    <input type="text" id="func-search" placeholder="Search classes or functions..." oninput="funcPage=1;filterFunctions()">
+                    <button onclick="funcPage=1;filterFunctions()">Reset</button>
+                    <button onclick="exportFunctions()" style="margin-left:auto">Export Functions</button>
+                </div>
+                <div id="func-count" class="sdk-count"></div>
+                <div class="letter-index" id="func-letters"></div>
+                <div id="func-list"></div>
+                <div class="pagination" id="func-pagination"></div>
+            </div>
+
+            <!-- OBJECTS -->
+            <div class="panel" id="panel-objects">
+                <div class="dump-controls">
+                    <input type="text" id="obj-search" placeholder="Search by name, type, or index..." oninput="objPage=1;filterObjects()">
+                    <select id="obj-type" onchange="objPage=1;filterObjects()">
+                        <option value="">All Types</option>
+                        <option value="Class">Class (24108)</option>
+<option value="ScriptStruct">ScriptStruct (21298)</option>
+<option value="Enum">Enum (6494)</option>
+<option value="BlueprintGeneratedClass">BlueprintGeneratedClass (2367)</option>
+<option value="WidgetBlueprintGeneratedClass">WidgetBlueprintGeneratedClass (1219)</option>
+<option value="WidgetBlueprintGeneratedClassExtension_StyleClass">WidgetBlueprintGeneratedClassExtension_StyleClass (1036)</option>
+<option value="UserDefinedStruct">UserDefinedStruct (130)</option>
+<option value="UserDefinedEnum">UserDefinedEnum (114)</option>
+<option value="AnimBlueprintGeneratedClass">AnimBlueprintGeneratedClass (89)</option>
+<option value="UIComponentWidgetBlueprintGeneratedClassExtension">UIComponentWidgetBlueprintGeneratedClassExtension (5)</option>
+<option value="ControlRigBlueprintGeneratedClass">ControlRigBlueprintGeneratedClass (2)</option>
+<option value="RigVMBlueprintGeneratedClass">RigVMBlueprintGeneratedClass (1)</option>
+                    </select>
+                    <button onclick="objPage=1;filterObjects()">Reset</button>
+                    <button onclick="exportObjects()" style="margin-left:auto">Export Objects</button>
+                </div>
+                <div id="obj-count" class="sdk-count"></div>
+                <div style="overflow-x:auto">
+                    <table class="dump-table">
+                        <thead><tr><th>Index</th><th>Type</th><th>Name</th></tr></thead>
+                        <tbody id="obj-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="obj-pagination"></div>
+            </div>
+
+            <!-- SDK -->
+            <div class="panel" id="panel-sdk" style="height:calc(100vh - 44px)">
+                <div style="display:flex;height:100%;overflow:hidden">
+                    <!-- Left: file list -->
+                    <div style="width:320px;min-width:320px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+                        <div class="sdk-tabs" id="sdk-tabs">
+                            <div class="sdk-tab active" data-cat="Structs" onclick="switchSDKCat('Structs')">Structs<span class="tab-count" id="sdk-tab-count-Structs"></span></div>
+                            <div class="sdk-tab" data-cat="Classes" onclick="switchSDKCat('Classes')">Classes<span class="tab-count" id="sdk-tab-count-Classes"></span></div>
+                            <div class="sdk-tab" data-cat="Enums" onclick="switchSDKCat('Enums')">Enums<span class="tab-count" id="sdk-tab-count-Enums"></span></div>
+                        </div>
+                        <div style="padding:12px;border-bottom:1px solid var(--border)">
+                            <input type="text" id="sdk-search" placeholder="Search..." oninput="filterSDK()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:7px 10px;font-size:12px;font-family:inherit;outline:none">
+                        </div>
+                        <div id="sdk-count" style="padding:6px 12px;font-size:11px;color:var(--fg2);border-bottom:1px solid var(--border)"></div>
+                        <div id="sdk-scroll-container" style="flex:1;overflow-y:auto;position:relative">
+                            <div id="sdk-scroll-spacer"></div>
+                            <div id="sdk-list" style="position:absolute;top:0;left:0;right:0"></div>
+                        </div>
+                    </div>
+                    <!-- Right: file content -->
+                    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+                        <div id="sdk-file-header" style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);font-size:12px;color:var(--accent);display:flex;align-items:center;gap:8px">
+                            <span style="color:var(--fg2)" id="sdk-file-cat">Struct</span> <span id="sdk-file-name">Select an item</span>
+                        </div>
+                        <div id="sdk-file-content" style="flex:1;overflow:auto;padding:0">
+                            <div style="padding:40px;text-align:center;color:var(--fg2);font-size:12px">Click an item on the left to view its content</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- APEX MICS -->
+            <div class="panel" id="panel-apex-mics">
+                <div style="color:var(--fg2);font-size:12px;margin-bottom:16px">Global pointer offsets for r5apex_dx12.exe</div>
+                <table class="dump-table">
+                    <thead><tr><th>Name</th><th>Offset</th><th></th></tr></thead>
+                    <tbody id="apex-mics-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- APEX BUTTONS -->
+            <div class="panel" id="panel-apex-buttons">
+                <div style="color:var(--fg2);font-size:12px;margin-bottom:16px">Input button command buffer offsets</div>
+                <table class="dump-table">
+                    <thead><tr><th>Button</th><th>Offset</th><th></th></tr></thead>
+                    <tbody id="apex-buttons-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- APEX RECVTABLES -->
+            <div class="panel" id="panel-apex-recvtables" style="height:calc(100vh - 44px)">
+                <div style="display:flex;height:100%;overflow:hidden">
+                    <div style="width:320px;min-width:320px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+                        <div style="padding:12px;border-bottom:1px solid var(--border)">
+                            <input type="text" id="apex-rt-search" placeholder="Search tables..." oninput="filterApexRT()" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:7px 10px;font-size:12px;font-family:inherit;outline:none">
+                        </div>
+                        <div id="apex-rt-count" style="padding:6px 12px;font-size:11px;color:var(--fg2);border-bottom:1px solid var(--border)"></div>
+                        <div id="apex-rt-scroll-container" style="flex:1;overflow-y:auto;position:relative">
+                            <div id="apex-rt-scroll-spacer"></div>
+                            <div id="apex-rt-list" style="position:absolute;top:0;left:0;right:0"></div>
+                        </div>
+                    </div>
+                    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+                        <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);font-size:12px;color:var(--accent);display:flex;align-items:center;gap:8px">
+                            <span style="color:var(--fg2)">table</span> <span id="apex-rt-name">Select a table</span>
+                        </div>
+                        <div id="apex-rt-content" style="flex:1;overflow:auto;padding:0">
+                            <div style="padding:40px;text-align:center;color:var(--fg2);font-size:12px">Click a table on the left to view its fields</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== DATA =====
+
+
+
+
+
+
+// ===== EMBEDDED VERSIONS (set by generate.py) =====
+
+// ===== STATUS CHECK =====
+function checkStatus(){
+    var games=[
+        {id:'fortnite',api:'fortnite'},
+        {id:'apex',api:'apex_legends'}
+    ];
+    games.forEach(function(g){
+        var dot=document.getElementById('dot-'+g.id);
+        var ver=document.getElementById('ver-'+g.id);
+        if(!EMBEDDED_VERSIONS[g.id]){dot.className='status-dot red';return;}
+        var url='https://agametracker.iamstern.xyz/api/status?game='+g.api;
+        fetch(url).then(function(r){return r.json()}).then(function(data){
+            var live=extractVersion(g.id,data);
+            var embedded=EMBEDDED_VERSIONS[g.id];
+            if(ver)ver.textContent=embedded;
+            if(live===embedded){
+                dot.className='status-dot green';
+            }else{
+                dot.className='status-dot red';
+                dot.title='New version available: '+live;
+            }
+        }).catch(function(){
+            dot.className='status-dot red';
+            dot.title='Could not check version';
+        });
+    });
+}
+function extractVersion(game,data){
+    return data.buildVersion||'';
+}
+
+// ===== NAVIGATION =====
+var currentSection = 'overview';
+function showSection(s){
+    currentSection = s;
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});
+    document.getElementById('panel-'+s).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
+    var navItem = document.querySelector('.nav-item[data-section="'+s+'"]');
+    if(navItem) navItem.classList.add('active');
+    var names={overview:'Overview',basic:'Basic Types',offsets:'Offsets',decrypts:'Decrypts',names:'Names',functions:'Functions',objects:'Objects',sdk:'SDK','apex-mics':'Global Pointers','apex-buttons':'Buttons','apex-recvtables':'RecvTables','apex-convars':'Convars'};
+    document.getElementById('breadcrumb').innerHTML='<span>'+(names[s]||s)+'</span>';
+    document.getElementById('content').scrollTop=0;
+    if(s==='sdk')setTimeout(function(){sdkRenderVirtual()},50);
+}
+
+// ===== NAMES =====
+var namePage=1, namePageSize=200, nameFiltered=null;
+function filterNames(){
+    var q=document.getElementById('name-search').value.toLowerCase();
+    nameFiltered=q?nameData.filter(function(e){return e[1].toLowerCase().indexOf(q)!==-1}):nameData;
+    namePage=1;renderNames();
+}
+function renderNames(){
+    if(!nameFiltered)nameFiltered=nameData;
+    var total=nameFiltered.length,pages=Math.ceil(total/namePageSize);
+    if(namePage>pages)namePage=pages||1;
+    var s=(namePage-1)*namePageSize,e=Math.min(s+namePageSize,total),rows='';
+    for(var i=s;i<e;i++){
+        var n=nameFiltered[i];
+        rows+='<tr><td class="idx">'+n[0]+'</td><td class="name">'+esc(n[1])+'</td></tr>';
+    }
+    document.getElementById('name-tbody').innerHTML=rows;
+    document.getElementById('name-count').textContent='Showing '+(s+1)+'-'+e+' of '+total.toLocaleString()+' names';
+    renderPagination('name-pagination',namePage,pages,function(p){namePage=p;renderNames()});
+}
+
+// ===== FUNCTIONS =====
+var funcPage=1,funcPageSize=50,funcFiltered=null,funcLetter='';
+function filterFunctions(){
+    var q=document.getElementById('func-search').value.toLowerCase();
+    var keys=Object.keys(funcData);
+    funcFiltered=q?keys.filter(function(k){
+        if(k.toLowerCase().indexOf(q)!==-1)return true;
+        return funcData[k].some(function(f){return f[0].toLowerCase().indexOf(q)!==-1});
+    }):keys;
+    funcPage=1;renderFunctions();
+}
+function renderFunctions(){
+    if(!funcFiltered)funcFiltered=Object.keys(funcData);
+    var filtered=funcFiltered;
+    if(funcLetter)filtered=filtered.filter(function(k){
+        var c=k[0]?k[0].toUpperCase():'#';
+        return c.match(/[A-Z]/)?c===funcLetter:c==='#'&&funcLetter==='#';
+    });
+    var total=filtered.length,pages=Math.ceil(total/funcPageSize);
+    if(funcPage>pages)funcPage=pages||1;
+    var s=(funcPage-1)*funcPageSize,e=Math.min(s+funcPageSize,total),html='';
+    for(var i=s;i<e;i++){
+        var cls=filtered[i],funcs=funcData[cls];
+        html+='<div class="offset-group"><div class="offset-ns">'+esc(cls)+' ('+funcs.length+' functions)</div>';
+        funcs.forEach(function(f){
+            html+='<div class="offset-entry"><span class="name">'+esc(f[0])+'</span><span class="flags">'+f[1]+'</span></div>';
+        });
+        html+='</div>';
+    }
+    document.getElementById('func-list').innerHTML=html;
+    document.getElementById('func-count').textContent='Showing '+(s+1)+'-'+e+' of '+total.toLocaleString()+' classes';
+    renderPagination('func-pagination',funcPage,pages,function(p){funcPage=p;renderFunctions()});
+}
+function initFuncLetters(){
+    var c=document.getElementById('func-letters'),letters={};
+    Object.keys(funcData).forEach(function(k){
+        var ch=k[0]?k[0].toUpperCase():'#';
+        if(!ch.match(/[A-Z]/))ch='#';
+        letters[ch]=true;
+    });
+    Object.keys(letters).sort().forEach(function(l){
+        var btn=document.createElement('button');
+        btn.textContent=l;
+        btn.onclick=function(){
+            funcLetter=funcLetter===l?'':l;
+            funcPage=1;
+            c.querySelectorAll('button').forEach(function(b){b.classList.remove('active')});
+            if(funcLetter)btn.classList.add('active');
+            renderFunctions();
+        };
+        c.appendChild(btn);
+    });
+}
+
+// ===== OBJECTS =====
+var objPage=1,objPageSize=500,objFiltered=null;
+function filterObjects(){
+    var q=document.getElementById('obj-search').value.toLowerCase();
+    var t=document.getElementById('obj-type').value;
+    objFiltered=objData;
+    if(t)objFiltered=objFiltered.filter(function(e){return e[2]===t});
+    if(q)objFiltered=objFiltered.filter(function(e){
+        return e[3].toLowerCase().indexOf(q)!==-1||e[2].toLowerCase().indexOf(q)!==-1||String(e[0]).indexOf(q)!==-1;
+    });
+    objPage=1;renderObjects();
+}
+function renderObjects(){
+    if(!objFiltered)objFiltered=objData;
+    var total=objFiltered.length,pages=Math.ceil(total/objPageSize);
+    if(objPage>pages)objPage=pages||1;
+    var s=(objPage-1)*objPageSize,e=Math.min(s+objPageSize,total),rows='';
+    for(var i=s;i<e;i++){
+        var n=objFiltered[i];
+        rows+='<tr><td class="idx">'+n[0]+'</td><td class="type">'+esc(n[2])+'</td><td class="name">'+esc(n[3])+'</td></tr>';
+    }
+    document.getElementById('obj-tbody').innerHTML=rows;
+    document.getElementById('obj-count').textContent='Showing '+(s+1)+'-'+e+' of '+total.toLocaleString()+' objects';
+    renderPagination('obj-pagination',objPage,pages,function(p){objPage=p;renderObjects()});
+}
+
+// ===== SDK =====
+var sdkCat='Structs',sdkFiltered=null,sdkSelected='',sdkItemH=32;
+function switchSDKCat(cat){
+    sdkCat=cat;
+    sdkSelected='';
+    document.querySelectorAll('.sdk-tab').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-cat')===cat)});
+    document.getElementById('sdk-file-name').textContent='Select an item';
+    document.getElementById('sdk-file-cat').textContent=cat.slice(0,-1);
+    document.getElementById('sdk-file-content').innerHTML='<div style="padding:40px;text-align:center;color:var(--fg2);font-size:12px">Click an item on the left to view its content</div>';
+    document.getElementById('sdk-search').value='';
+    filterSDK();
+}
+function initSDKTabs(){
+    var cats=['Structs','Classes','Enums'];
+    cats.forEach(function(c){
+        var el=document.getElementById('sdk-tab-count-'+c);
+        if(el)el.textContent=' ('+((sdkData[c]||[]).length)+')';
+    });
+}
+function filterSDK(){
+    var q=document.getElementById('sdk-search').value.toLowerCase();
+    var all=sdkData[sdkCat]||[];
+    sdkFiltered=q?all.filter(function(k){return k.toLowerCase().indexOf(q)!==-1}):all.slice();
+    document.getElementById('sdk-count').textContent=sdkFiltered.length+' items';
+    sdkRenderVirtual();
+}
+function sdkRenderVirtual(){
+    var container=document.getElementById('sdk-scroll-container');
+    var list=document.getElementById('sdk-list');
+    var spacer=document.getElementById('sdk-scroll-spacer');
+    var total=sdkFiltered?sdkFiltered.length:0;
+    spacer.style.height=(total*sdkItemH)+'px';
+    var scrollTop=container.scrollTop;
+    var viewH=container.clientHeight;
+    var start=Math.max(0,Math.floor(scrollTop/sdkItemH)-10);
+    var end=Math.min(total,Math.ceil((scrollTop+viewH)/sdkItemH)+10);
+    var html='';
+    for(var i=start;i<end;i++){
+        var name=sdkFiltered[i];
+        var key=sdkCat+'/'+name;
+        var cls=key===sdkSelected?'sdk-file-item selected':'sdk-file-item';
+        html+='<div class="'+cls+'" onclick="selectSDK(\''+esc(name)+'\')">'+esc(name)+'</div>';
+    }
+    list.innerHTML=html;
+    list.style.top=(start*sdkItemH)+'px';
+}
+function highlightSDK(code){
+    var escRe=[/&/g,/</g,/>/g,/"/g];
+    var escFn=function(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
+    var lines=code.split('\n');
+    var out=[];
+    for(var li=0;li<lines.length;li++){
+        var ln=lines[li];
+        // full-line comment
+        if(/^\s*\/\//.test(ln)){out.push('<span class="sdk-hl-cmt">'+escFn(ln)+'</span>');continue;}
+        // full-line preprocessor
+        if(/^\s*#/.test(ln)){out.push('<span class="sdk-hl-pre">'+escFn(ln)+'</span>');continue;}
+        // full-line brace
+        if(/^\s*[{}]\s*$/.test(ln)){out.push(escFn(ln));continue;}
+        // process tokens
+        var tokens=[];var pos=0;
+        while(pos<ln.length){
+            // inline comment
+            if(ln[pos]==='/'&&pos+1<ln.length&&ln[pos+1]==='/'){
+                tokens.push('<span class="sdk-hl-cmt">'+escFn(ln.substring(pos))+'</span>');pos=ln.length;continue;}
+            // block comment start
+            if(ln[pos]==='/'&&pos+1<ln.length&&ln[pos+1]==='*'){
+                var end=ln.indexOf('*/',pos+2);if(end===-1)end=ln.length-2;else end+=2;
+                tokens.push('<span class="sdk-hl-cmt">'+escFn(ln.substring(pos,end))+'</span>');pos=end;continue;}
+            // string
+            if(ln[pos]==='"'){
+                var s2=ln.indexOf('"',pos+1);while(s2!==-1&&ln[s2-1]==='\\')s2=ln.indexOf('"',s2+1);
+                if(s2===-1)s2=ln.length;else s2++;tokens.push('<span class="sdk-hl-str">'+escFn(ln.substring(pos,s2))+'</span>');pos=s2;continue;}
+            // number
+            if(/[0-9]/.test(ln[pos])&&(pos===0||/[\s,<>(){}\[*&|=!+\-]/.test(ln[pos-1]))){
+                var m=ln.substring(pos).match(/^(0x[0-9a-fA-F]+|[0-9]+[uUlL]*)/);
+                if(m){tokens.push('<span class="sdk-hl-num">'+escFn(m[0])+'</span>');pos+=m[0].length;continue;}}
+            // word
+            if(/[A-Za-z_]/.test(ln[pos])){
+                var w='';while(pos<ln.length&&/[A-Za-z0-9_]/.test(ln[pos])){w+=ln[pos];pos++;}
+                // Check if followed by : for offset annotation
+                var rest=ln.substring(pos);
+                if(rest.match(/^\s*Offset:/)||rest.match(/^\s*Size:/)){
+                    tokens.push('<span class="sdk-hl-off">'+escFn(w)+'</span>');continue;}
+                // Check if next non-space is '(' => function
+                var nxt=rest.match(/^\s*\(/);
+                if(nxt){
+                    // lookbehind: if preceded by type keyword, highlight as type
+                    var last=tokens.length-1;var prevIsType=last>=0&&(tokens[last].indexOf('sdk-hl-type')!==-1||tokens[last].indexOf('sdk-hl-kw')!==-1);
+                    tokens.push('<span class="'+(prevIsType?'sdk-hl-type':'sdk-hl-type')+'">'+escFn(w)+'</span>');continue;}
+                // keyword check
+                var kw={'struct':1,'class':1,'enum':1,'public':1,'private':1,'protected':1,'void':1,'return':1,'if':1,'else':1,'for':1,'while':1,'do':1,'switch':1,'case':1,'break':1,'continue':1,'typedef':1,'using':1,'namespace':1,'template':1,'typename':1,'constexpr':1,'const':1,'static':1,'virtual':1,'override':1,'inline':1,'volatile':1,'mutable':1,'explicit':1,'friend':1,'operator':1,'new':1,'delete':1,'nullptr':1,'true':1,'false':1,'this':1,'sizeof':1,'typeof':1,'decltype':1,'auto':1};
+                if(kw[w]){tokens.push('<span class="sdk-hl-kw">'+escFn(w)+'</span>');continue;}
+                // type check
+                var types={'uint8_t':1,'uint16_t':1,'uint32_t':1,'uint64_t':1,'int8_t':1,'int16_t':1,'int32_t':1,'int64_t':1,'float':1,'double':1,'bool':1,'char':1,'wchar_t':1,'TArray':1,'TMap':1,'TSet':1,'TWeakObjectPtr':1,'TSoftObjectPtr':1,'TSoftClassPtr':1,'TScriptInterface':1,'FString':1,'FName':1,'FText':1,'FVector':1,'FRotator':1,'FTransform':1,'FHitResult':1,'FKey':1,'FVector2D':1,'FVector4':1,'FLinearColor':1,'FQuat':1,'FBox':1,'FSphere':1,'FPlane':1,'FMatrix':1,'FColor':1,'FDateTime':1,'FTimespan':1,'FGuid':1,'FRandomStream':1,'FMulticastScriptDelegate':1,'FScriptDelegate':1,'TEnumAsByte':1,'TSubclassOf':1,'TSoftClassPtr':1,'UObject':1,'UClass':1,'UFunction':1,'UProperty':1,'UField':1,'UActorComponent':1,'USceneComponent':1,'UPrimitiveComponent':1,'AActor':1,'AController':1,'APawn':1,'APlayerController':1,'UWorld':1,'UObject*':1,'UClass*':1};
+                if(types[w]){tokens.push('<span class="sdk-hl-type">'+escFn(w)+'</span>');continue;}
+                tokens.push(escFn(w));continue;}
+            // other char
+            tokens.push(escFn(ln[pos]));pos++;}
+        out.push(tokens.join(''));}
+    return out.join('\n');}
+function selectSDK(name){
+    var key=sdkCat+'/'+name;
+    sdkSelected=key;
+    document.getElementById('sdk-file-name').textContent=name;
+    document.getElementById('sdk-file-cat').textContent=sdkCat.slice(0,-1);
+    var content=sdkContent[key]||'// No content available';
+    document.getElementById('sdk-file-content').innerHTML='<pre style="margin:0;padding:16px;font-size:12px;line-height:1.6;color:var(--fg);white-space:pre;overflow-x:auto">'+highlightSDK(content)+'</pre>';
+    sdkRenderVirtual();
+}
+
+// ===== UTILS =====
+function esc(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';}
+function renderPagination(id,current,total,callback){
+    var el=document.getElementById(id);
+    if(total<=1){el.innerHTML='';return;}
+    var h='<button '+(current===1?'disabled':'')+' data-p="prev">Prev</button>';
+    var range=5,start=Math.max(1,current-range),end=Math.min(total,current+range);
+    if(start>1)h+='<button data-p="1">1</button><span class="info">...</span>';
+    for(var i=start;i<=end;i++)h+='<button data-p="'+i+'"'+(i===current?' class="active"':'')+'>'+i+'</button>';
+    if(end<total)h+='<span class="info">...</span><button data-p="'+total+'">'+total+'</button>';
+    h+='<button '+(current===total?'disabled':'')+' data-p="next">Next</button>';
+    h+='<span class="info">'+total+' pages</span>';
+    el.innerHTML=h;
+    el.querySelectorAll('button').forEach(function(btn){
+        btn.onclick=function(){
+            var p=btn.getAttribute('data-p');
+            if(p==='prev')callback(current-1);
+            else if(p==='next')callback(current+1);
+            else{var n=parseInt(p);if(!isNaN(n))callback(n);}
+        };
+    });
+}
+
+// ===== COPY =====
+function copyVal(btn, val){
+    navigator.clipboard.writeText(val).then(function(){
+        btn.textContent='copied';
+        btn.classList.add('copied');
+        setTimeout(function(){btn.textContent='copy';btn.classList.remove('copied');},1500);
+    });
+}
+
+// ===== EXPORT OFFSETS =====
+function exportOffsets(){
+    var text='// Auto-generated by HWIDR SDK Dumper\n#pragma once\n#include <cstdint>\n\nnamespace Offsets {\n\n';
+    var els=document.querySelectorAll('#panel-offsets .offset-group');
+    els.forEach(function(g){
+        var ns=g.querySelector('.offset-ns').textContent.trim();
+        text+='namespace '+ns+' {\n';
+        g.querySelectorAll('.offset-entry').forEach(function(e){
+            var name=e.querySelector('.offset-name').textContent.trim();
+            var val=e.querySelector('.offset-val').childNodes[0].textContent.trim();
+            var type=val.startsWith('0x')&&val.length<=10?'uint32_t':'uint64_t';
+            if(ns==='Global')type='uint64_t';
+            text+='    constexpr '+type+' '+name+' = '+val+';\n';
+        });
+        text+='}\n\n';
+    });
+    text+='}\n';
+    var blob=new Blob([text],{type:'text/plain'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='Offsets.hpp';
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+// ===== COPY OFFSETS =====
+function copyOffsets(){
+    var text='// Offsets.hpp\n#pragma once\n#include <cstdint>\n\nnamespace Offsets {\n\n';
+    var els=document.querySelectorAll('#panel-offsets .offset-group');
+    els.forEach(function(g){
+        var ns=g.querySelector('.offset-ns').textContent.trim();
+        text+='namespace '+ns+' {\n';
+        g.querySelectorAll('.offset-entry').forEach(function(e){
+            var name=e.querySelector('.offset-name').textContent.trim();
+            var val=e.querySelector('.offset-val').textContent.trim();
+            var type=val.startsWith('0x')&&val.length<=10?'uint32_t':'uint64_t';
+            if(ns==='Global')type='uint64_t';
+            text+='    constexpr '+type+' '+name+' = '+val+';\n';
+        });
+        text+='}\n\n';
+    });
+    text+='}\n';
+    navigator.clipboard.writeText(text).then(function(){
+        var btn=document.querySelector('#panel-offsets button');
+        btn.textContent='Copied!';
+        btn.style.color='var(--accent)';
+        setTimeout(function(){btn.textContent='Copy Offsets';btn.style.color='var(--fg)';},2000);
+    });
+}
+
+// ===== EXPORT NAMES =====
+function exportNames(){
+    var text='// NameDump.txt\n';
+    nameData.forEach(function(e){text+='['+e[0]+'] '+e[1]+'\n';});
+    downloadText('NameDump.txt', text);
+}
+
+// ===== EXPORT FUNCTIONS =====
+function exportFunctions(){
+    var text='// FunctionsDump.txt\n';
+    var keys=Object.keys(funcData).sort();
+    keys.forEach(function(cls){
+        text+='['+cls+']\n';
+        funcData[cls].forEach(function(f){text+=f[0]+' flags='+f[1]+'\n';});
+    });
+    downloadText('FunctionsDump.txt', text);
+}
+
+// ===== EXPORT OBJECTS =====
+function exportObjects(){
+    var text='// ObjectDump.txt\n';
+    objData.forEach(function(e){text+='['+e[0]+'] '+e[1]+' '+e[2]+' '+e[3]+'\n';});
+    downloadText('ObjectDump.txt', text);
+}
+
+// ===== EXPORT APEX DUMP =====
+function exportApexDump(){
+    if(!apexData)return;
+    var text='';
+    text+='[Mics]\n';
+    apexData.mics.forEach(function(e){text+=e[0]+' = '+e[1]+'\n';});
+    text+='\n[Buttons]\n';
+    apexData.buttons.forEach(function(e){text+=e[0]+' = '+e[1]+'\n';});
+    text+='\n[RecvTable]\n';
+    var keys=Object.keys(apexData.recvTables).sort();
+    keys.forEach(function(tbl){
+        text+='['+tbl+']\n';
+        apexData.recvTables[tbl].forEach(function(f){text+=f[0]+' = '+f[1]+'\n';});
+    });
+    downloadText('r5apex_dx12.exe.txt', text);
+}
+
+// ===== DOWNLOAD HELPER =====
+function downloadText(filename, text){
+    var blob=new Blob([text],{type:'text/plain'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+// ===== GAME SWITCHING =====
+var currentGame = 'fortnite';
+
+function formatBytes(bytes){
+    if(!bytes||bytes==='0')return '-';
+    var b=parseInt(bytes);
+    if(isNaN(b))return bytes;
+    if(b>=1e12)return(b/1e12).toFixed(2)+' TB';
+    if(b>=1e9)return(b/1e9).toFixed(2)+' GB';
+    if(b>=1e6)return(b/1e6).toFixed(2)+' MB';
+    return(b/1e3).toFixed(1)+' KB';
+}
+function formatDate(iso){
+    if(!iso)return '-';
+    try{
+        var d=new Date(iso);
+        var dd=String(d.getDate()).padStart(2,'0');
+        var mm=String(d.getMonth()+1).padStart(2,'0');
+        var yyyy=d.getFullYear();
+        var hh=String(d.getHours()).padStart(2,'0');
+        var mi=String(d.getMinutes()).padStart(2,'0');
+        var ss=String(d.getSeconds()).padStart(2,'0');
+        return dd+'/'+mm+'/'+yyyy+' '+hh+':'+mi+':'+ss;
+    }catch(e){return iso;}
+}
+function formatBuildName(v){
+    if(!v)return '-';
+    return v.replace(/\+/g,' ').replace(/^ Fortnite Release/,'Fortnite Release');
+}
+function fetchBuildStatus(game){
+    var url='https://agametracker.iamstern.xyz/api/status?game='+game;
+    fetch(url).then(function(r){return r.json()}).then(function(data){
+        if(game==='fortnite'){
+            document.getElementById('build-hash').textContent=data.buildVersion||'-';
+            document.getElementById('build-target').textContent='FortniteClient-Win64-Shipping.exe';
+            document.getElementById('build-size').textContent=formatBytes(data.downloadSize);
+            document.getElementById('build-date').textContent=formatDate(data.lastUpdated);
+        }
+        if(game==='apex_legends'){
+            document.getElementById('build-hash-apex').textContent=data.buildVersion||'-';
+            document.getElementById('build-target-apex').textContent='r5apex_dx12.exe';
+            document.getElementById('build-size-apex').textContent=formatBytes(data.buildSize);
+            document.getElementById('build-date-apex').textContent=formatDate(data.lastUpdated);
+        }
+    }).catch(function(){
+        document.getElementById('build-hash').textContent='Offline';
+        document.getElementById('build-target').textContent='-';
+        document.getElementById('build-size').textContent='-';
+        document.getElementById('build-date').textContent='-';
+        document.getElementById('build-hash-apex').textContent='Offline';
+        document.getElementById('build-target-apex').textContent='-';
+        document.getElementById('build-size-apex').textContent='-';
+        document.getElementById('build-date-apex').textContent='-';
+    });
+}
+function switchGame(game){
+    currentGame = game;
+    document.querySelectorAll('.game-btn').forEach(function(b){b.classList.toggle('active',b.textContent.toLowerCase().indexOf(game)!==-1)});
+    document.querySelectorAll('.nav-game').forEach(function(n){n.classList.toggle('active',n.getAttribute('data-game')===game)});
+    document.getElementById('sidebar-subtitle').textContent=game==='fortnite'?'Fortnite Dumper Viewer':'Apex Legends Dumper Viewer';
+    document.getElementById('overview-fortnite').style.display=game==='fortnite'?'':'none';
+    document.getElementById('overview-apex').style.display=game==='apex'?'':'none';
+    fetchBuildStatus(game==='apex'?'apex_legends':'fortnite');
+    if(game==='apex'){
+        renderApexOverview();
+        filterApexMics();
+        filterApexButtons();
+        filterApexRT();
+    }
+    showSection('overview');
+}
+
+// ===== APEX OVERVIEW =====
+function renderApexOverview(){
+    if(!apexData)return;
+    var s=apexData.stats;
+    var html='<div class="stat-card"><div class="label">Global Pointers</div><div class="value">'+s.mics+'</div><div class="detail">Mics offsets</div></div>';
+    html+='<div class="stat-card"><div class="label">Input Buttons</div><div class="value">'+s.buttons+'</div><div class="detail">Button bindings</div></div>';
+    html+='<div class="stat-card"><div class="label">RecvTables</div><div class="value">'+s.tables+'</div><div class="detail">Network tables</div></div>';
+    html+='<div class="stat-card"><div class="label">Total Fields</div><div class="value">'+s.totalFields.toLocaleString()+'</div><div class="detail">Networked properties</div></div>';
+    document.getElementById('apex-stats-grid').innerHTML=html;
+}
+
+// ===== APEX MICS =====
+function filterApexMics(){
+    if(!apexData)return;
+    var rows='';
+    apexData.mics.forEach(function(e){
+        rows+='<tr><td class="name">'+esc(e[0])+'</td><td class="addr">'+e[1]+'</td><td><button class="copy-btn" onclick="copyVal(this,\''+e[1]+'\')">copy</button></td></tr>';
+    });
+    document.getElementById('apex-mics-tbody').innerHTML=rows;
+}
+
+// ===== APEX BUTTONS =====
+function filterApexButtons(){
+    if(!apexData)return;
+    var rows='';
+    apexData.buttons.forEach(function(e){
+        rows+='<tr><td class="name">'+esc(e[0])+'</td><td class="addr">'+e[1]+'</td><td><button class="copy-btn" onclick="copyVal(this,\''+e[1]+'\')">copy</button></td></tr>';
+    });
+    document.getElementById('apex-buttons-tbody').innerHTML=rows;
+}
+
+// ===== APEX RECVTABLES =====
+var apexRTFiltered=null,apexRTSelected='',apexRTItemH=32;
+function filterApexRT(){
+    if(!apexData)return;
+    var q=document.getElementById('apex-rt-search').value.toLowerCase();
+    var keys=Object.keys(apexData.recvTables);
+    apexRTFiltered=q?keys.filter(function(k){return k.toLowerCase().indexOf(q)!==-1}):keys.slice();
+    document.getElementById('apex-rt-count').textContent=apexRTFiltered.length+' tables';
+    apexRTRenderVirtual();
+}
+function apexRTRenderVirtual(){
+    var container=document.getElementById('apex-rt-scroll-container');
+    var list=document.getElementById('apex-rt-list');
+    var spacer=document.getElementById('apex-rt-scroll-spacer');
+    var total=apexRTFiltered?apexRTFiltered.length:0;
+    spacer.style.height=(total*apexRTItemH)+'px';
+    var scrollTop=container.scrollTop;
+    var viewH=container.clientHeight;
+    var start=Math.max(0,Math.floor(scrollTop/apexRTItemH)-10);
+    var end=Math.min(total,Math.ceil((scrollTop+viewH)/apexRTItemH)+10);
+    var html='';
+    for(var i=start;i<end;i++){
+        var name=apexRTFiltered[i];
+        var cls=name===apexRTSelected?'sdk-file-item selected':'sdk-file-item';
+        html+='<div class="'+cls+'" onclick="selectApexRT(\''+esc(name)+'\')">'+esc(name)+'</div>';
+    }
+    list.innerHTML=html;
+    list.style.top=(start*apexRTItemH)+'px';
+}
+function selectApexRT(name){
+    apexRTSelected=name;
+    document.getElementById('apex-rt-name').textContent=name;
+    var fields=apexData.recvTables[name]||[];
+    var html='<table class="dump-table"><thead><tr><th>Field</th><th>Offset</th><th></th></tr></thead><tbody>';
+    fields.forEach(function(f){
+        html+='<tr><td class="name">'+esc(f[0])+'</td><td class="addr">'+f[1]+'</td><td><button class="copy-btn" onclick="copyVal(this,\''+f[1]+'\')">copy</button></td></tr>';
+    });
+    html+='</tbody></table>';
+    document.getElementById('apex-rt-content').innerHTML=html;
+    apexRTRenderVirtual();
+}
+
+// ===== CAPTCHA =====
+function onCaptchaSuccess(){
+    var ov=document.getElementById('captcha-overlay');
+    ov.classList.add('hidden');
+    setTimeout(function(){ov.style.display='none'},500);
+}
+
+// ===== INIT =====
+initFuncLetters();
+initSDKTabs();
+filterSDK();
+document.getElementById('sdk-scroll-container').addEventListener('scroll',function(){sdkRenderVirtual()});
+filterNames();
+filterFunctions();
+filterObjects();
+if(apexData){
+    filterApexRT();
+    document.getElementById('apex-rt-scroll-container').addEventListener('scroll',function(){apexRTRenderVirtual()});
+}
+fetchBuildStatus('fortnite');
+fetchBuildStatus('apex_legends');
+checkStatus();
+
+
+;
+</script>
+</body>
+</html>
