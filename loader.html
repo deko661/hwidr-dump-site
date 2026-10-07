@@ -20,22 +20,37 @@ body{margin:0;background:#0a0a0a;color:#e0e0e0;font-family:Consolas,monospace;di
 <script>
 var nameData=[],funcData={},objData=[],sdkData={},sdkContent={},apexData=null,EMBEDDED_VERSIONS={};
 
-var chunkUrls=['index.html?v=1789267625'];
+var chunkUrls=['index.html?v=1791395644'];
 
 document.getElementById('status').textContent='Loading data and page chunks...';
 
 Promise.all([
   Promise.all([
-fetch('data/apexData.json?v=1789267625').then(r=>r.text()).then(t=>{apexData=JSON.parse(t)}),
-fetch('data/funcData.json?v=1789267625').then(r=>r.text()).then(t=>{funcData=JSON.parse(t)}),
-fetch('data/nameData.json?v=1789267625').then(r=>r.text()).then(t=>{nameData=JSON.parse(t)}),
-Promise.all([fetch('data/objData.json.part0?v=1789267625').then(r=>r.text().then(t=>t.slice(1,-1))),fetch('data/objData.json.part1?v=1789267625').then(r=>r.text().then(t=>t.slice(1,-1))),fetch('data/objData.json.part2?v=1789267625').then(r=>r.text().then(t=>t.slice(1,-1))),fetch('data/objData.json.part3?v=1789267625').then(r=>r.text().then(t=>t.slice(1,-1)))]).then(parts=>{objData=JSON.parse('['+parts.join(',')+']')}),
-fetch('data/sdkContent.json?v=1789267625').then(r=>r.text()).then(t=>{sdkContent=JSON.parse(t)}),
-fetch('data/sdkData.json?v=1789267625').then(r=>r.text()).then(t=>{sdkData=JSON.parse(t)})
+fetch('data/versions.json?v=1791395644').then(r=>r.text()).then(t=>{EMBEDDED_VERSIONS=JSON.parse(t)}),
+fetch('data/apexData.json?v=1791395644').then(r=>r.text()).then(t=>{apexData=JSON.parse(t)}),
+fetch('data/funcData.json?v=1791395644').then(r=>r.text()).then(t=>{funcData=JSON.parse(t)}),
+fetch('data/nameData.json?v=1791395644').then(r=>r.text()).then(t=>{nameData=JSON.parse(t)}),
+fetch('data/objData.json?v=1791395644').then(r=>r.text()).then(t=>{objData=JSON.parse(t)}),
+Promise.all([fetch('data/sdkContent.json.part0?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part1?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part2?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part3?v=1791395644').then(r=>r.text()),fetch('data/sdkContent.json.part4?v=1791395644').then(r=>r.text())]).then(parts=>{var o=parts[0].trim().charAt(0),c=o==='['?']':'}';sdkContent=JSON.parse(o+parts.map(p=>p.trim().slice(1,-1)).join(',')+c)}),
+fetch('data/sdkData.json?v=1791395644').then(r=>r.text()).then(t=>{sdkData=JSON.parse(t)})
   ]),
   Promise.all(chunkUrls.map(function(u){return fetch(u).then(function(r){return r.text()})}))
 ]).then(function(results){
   var fullHtml=results[1].join('');
+  var dataScript='<script>'
+    +'var nameData='+JSON.stringify(nameData)+';'
+    +'var funcData='+JSON.stringify(funcData)+';'
+    +'var objData='+JSON.stringify(objData)+';'
+    +'var sdkData='+JSON.stringify(sdkData)+';'
+    +'var sdkContent='+JSON.stringify(sdkContent)+';'
+    +'var apexData='+JSON.stringify(apexData)+';'
+    +'var EMBEDDED_VERSIONS='+JSON.stringify(EMBEDDED_VERSIONS)+';'
+    +'<\/script>';
+  if(fullHtml.indexOf('</head>')!==-1){
+    fullHtml=fullHtml.replace('</head>', dataScript+'</head>');
+  }else{
+    fullHtml=dataScript+fullHtml;
+  }
   document.open();
   document.write(fullHtml);
   document.close();
