@@ -123,6 +123,31 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
 .nav-game{display:none}
 .nav-game.active{display:block}
 
+/* API DOCS */
+.docs-header-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.docs-header-row .game-selector{margin-bottom:0}
+.docs-header-row .spacer{flex:1}
+.docs-btn{padding:6px 16px;font-size:12px;border-radius:4px;cursor:pointer;color:var(--fg2);background:var(--bg2);border:1px solid var(--border);transition:all .1s;font-family:inherit;display:flex;align-items:center;gap:6px}
+.docs-btn:hover{background:var(--hover);color:var(--accent);border-color:var(--accent2)}
+.docs-endpoint{background:var(--bg2);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden}
+.docs-endpoint-head{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .1s}
+.docs-endpoint-head:hover{background:var(--hover)}
+.docs-method{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:#4caf50;padding:2px 8px;font-size:10px;font-weight:600;letter-spacing:1px}
+.docs-path{color:var(--accent);font-size:12px}
+.docs-desc{color:var(--fg2);font-size:11px;flex:1;text-align:right}
+.docs-arrow{color:var(--fg2);font-size:10px;transition:transform .15s}
+.docs-endpoint.open .docs-arrow{transform:rotate(90deg)}
+.docs-endpoint-body{display:none;padding:14px;border-top:1px solid var(--border);background:var(--code-bg)}
+.docs-endpoint.open .docs-endpoint-body{display:block}
+.docs-curl{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.docs-curl pre{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px 12px;font-size:11px;color:#6a9fb5;overflow-x:auto;white-space:pre;margin:0}
+.docs-try{display:flex;gap:8px;margin-top:10px;align-items:center}
+.docs-try button{background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 12px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap}
+.docs-try button:hover{background:var(--bg4);color:var(--accent)}
+.docs-try-result{margin-top:8px;max-height:240px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-size:11px;color:#b5cea8;white-space:pre;word-break:break-all;display:none}
+.docs-note{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--fg2);line-height:1.7}
+.docs-note code{color:var(--accent);background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:11px}
+
 .layout{position:relative;z-index:1}
 
 /* BUILDBAR */
@@ -155,6 +180,9 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
             <div class="nav-section">General</div>
             <div class="nav-item active" data-section="overview" onclick="showSection('overview')">
                 <span class="icon"></span> Overview
+            </div>
+            <div class="nav-item" data-section="docs" onclick="showSection('docs')">
+                <span class="icon"></span> API Docs
             </div>
             <div class="nav-game active" data-game="fortnite">
                 <div class="nav-section">Fortnite</div>
@@ -201,9 +229,13 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
 
             <!-- OVERVIEW -->
             <div class="panel active" id="panel-overview">
-                <div class="game-selector">
-                    <div class="game-btn active" onclick="switchGame('fortnite')"><span class="status-dot pending" id="dot-fortnite"></span>Fortnite<span class="ver" id="ver-fortnite"></span></div>
-                    <div class="game-btn" onclick="switchGame('apex')"><span class="status-dot pending" id="dot-apex"></span>Apex Legends<span class="ver" id="ver-apex"></span></div>
+                <div class="docs-header-row">
+                    <div class="game-selector">
+                        <div class="game-btn active" onclick="switchGame('fortnite')"><span class="status-dot pending" id="dot-fortnite"></span>Fortnite<span class="ver" id="ver-fortnite"></span></div>
+                        <div class="game-btn" onclick="switchGame('apex')"><span class="status-dot pending" id="dot-apex"></span>Apex Legends<span class="ver" id="ver-apex"></span></div>
+                    </div>
+                    <div class="spacer"></div>
+                    <button class="docs-btn" onclick="showSection('docs')" title="API Documentation">Docs</button>
                 </div>
                 <div id="overview-fortnite">
                     <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:24px">
@@ -274,6 +306,65 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
                     <div style="margin-bottom:16px"><button onclick="exportApexDump()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Export Dump</button></div>
                 </div>
             </div>
+            <!-- API DOCS -->
+            <div class="panel" id="panel-docs">
+                <div style="font-size:18px;color:var(--accent);font-weight:600;margin-bottom:6px">API Documentation</div>
+                <div style="font-size:12px;color:var(--fg2);margin-bottom:16px">Static JSON API exposing every dump published on this site. No auth, no rate limit, CORS enabled &mdash; point any HTTP client at the files.</div>
+
+                <div class="docs-note">
+                    <b style="color:var(--fg)">Base URL</b> &mdash; in production, every path below is relative to the site root:
+                    <code id="docs-base-url">https://&lt;your-domain&gt;/api/manifest.json</code>. Locally, files are next to the page
+                    (<code>site/local/api/</code>), so relative paths work over <code>file://</code> too.
+                    <br><br>
+                    <b style="color:var(--fg)">sdkContent.json</b> is split into parts to stay under hosting file-size limits:
+                    fetch <code>api/sdkContent.json.part0</code> &hellip; <code>part4</code>, <code>JSON.parse</code> each part
+                    (each is a valid <code>{"Category/Name": "header"}</code> object) and merge with <code>Object.assign</code>.
+                </div>
+
+                <div id="docs-endpoints"></div>
+
+                <div style="margin:20px 0 10px;font-size:13px;color:var(--accent);font-weight:600">Examples</div>
+                <div class="code-block" style="margin-bottom:12px">
+                    <div class="header">JavaScript &mdash; fetch the offsets and read GWorld</div>
+                    <pre>fetch('/api/offsets.json')
+  .then(r =&gt; r.json())
+  .then(data =&gt; {
+    const gw = data.namespaces.Offsets.GWorld;   // "0x1b1d12f8"
+    console.log('GWorld =', gw);
+  });</pre>
+                </div>
+                <div class="code-block" style="margin-bottom:12px">
+                    <div class="header">Python &mdash; load names and search</div>
+                    <pre>import json, urllib.request
+
+names = json.load(urllib.request.urlopen('&lt;BASE_URL&gt;/api/names.json'))
+hits = [n for n in names if 'BP_' in n['name']]
+print(len(hits), 'blueprint names')</pre>
+                </div>
+                <div class="code-block" style="margin-bottom:16px">
+                    <div class="header">C++ &mdash; consume the offsets header directly</div>
+                    <pre>// data.namespaces.Offsets maps 1:1 with the raw Offsets.hpp
+#include &lt;cstdint&gt;
+
+struct Offsets {
+    uint32_t GWorld = 0x1b1d12f8; // from api/offsets.json
+};</pre>
+                </div>
+
+                <div style="margin:20px 0 10px;font-size:13px;color:var(--accent);font-weight:600">Field reference &mdash; shapes returned by each endpoint</div>
+                <div class="docs-note">
+                    <b style="color:var(--fg)">names.json</b> &rarr; <code>[{"index": 0, "name": "None"}, ...]</code><br>
+                    <b style="color:var(--fg)">objects.json</b> &rarr; <code>[{"index": 0, "type": "Class", "name": "/Script/Engine.Engine"}, ...]</code><br>
+                    <b style="color:var(--fg)">typeCounts.json</b> &rarr; <code>{"Class": 12345, "Function": 6789, ...}</code><br>
+                    <b style="color:var(--fg)">functions.json</b> &rarr; <code>{"ClassName": [{"name": "Foo", "flags": "exec=0x..."}, ...], ...}</code><br>
+                    <b style="color:var(--fg)">offsets.json</b> &rarr; <code>{"namespaces": {"Offsets": {"GWorld": "0x..."}}, "rawOffsetsHpp": "..."}</code><br>
+                    <b style="color:var(--fg)">decrypts.json</b> &rarr; <code>{"files": {"file.hpp": {"Namespace": [{"name": "X", "value": "0x...", "type": "uint32_t"}]}}, "rawHeaders": {...}}</code><br>
+                    <b style="color:var(--fg)">sdk.json</b> &rarr; <code>{"Classes": ["AActor", ...], "Structs": [...], "Enums": [...]} <i>(names only)</i></code><br>
+                    <b style="color:var(--fg)">sdkContent.json*</b> &rarr; <code>{"Classes/AActor": "// Class Engine.Actor ...", ...} <i>(split in 5 parts)</i></code><br>
+                    <b style="color:var(--fg)">apex.json</b> &rarr; <code>{"mics": [[name, 0x..]...], "buttons": [...], "recvTables": {"table": [[field, 0x..]...]}, "convars": [...], "stats": {...}}</code>
+                </div>
+            </div>
+
             <!-- OFFSETS -->
             <div class="panel" id="panel-offsets">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -1117,6 +1208,70 @@ function extractVersion(game,data){
     return data.buildVersion||'';
 }
 
+// ===== API DOCS =====
+var API_ENDPOINTS = [
+    {path:'api/manifest.json', desc:'API metadata, counters and endpoint list'},
+    {path:'api/offsets.json', desc:'Offsets grouped by namespace + raw Offsets.hpp'},
+    {path:'api/decrypts.json', desc:'Decrypt constants by file/namespace + raw headers'},
+    {path:'api/names.json', desc:'GNames name pool: [{index, name}]'},
+    {path:'api/objects.json', desc:'GObjects dump: [{index, type, name}]'},
+    {path:'api/typeCounts.json', desc:'Object type breakdown: {type: count}'},
+    {path:'api/functions.json', desc:'UFunctions grouped by class: {class: [{name, flags}]}'},
+    {path:'api/sdk.json', desc:'SDK type index (names only): {Classes, Structs, Enums}'},
+    {path:'api/sdkContent.json', desc:'Full SDK header sources — split across 5 parts (.part0..part4, merge and JSON.parse each)'},
+    {path:'api/apex.json', desc:'Apex dump: mics, buttons, recvTables, convars, stats'}
+];
+
+function renderDocsEndpoints(){
+    var host=document.getElementById('docs-endpoints');
+    if(!host||host.dataset.rendered)return;
+    var html='';
+    API_ENDPOINTS.forEach(function(e,i){
+        html+='<div class="docs-endpoint" id="docs-ep-'+i+'">'
+            +'<div class="docs-endpoint-head" onclick="toggleDocsEndpoint('+i+')">'
+            +'<span class="docs-method">GET</span>'
+            +'<span class="docs-path">'+e.path+'</span>'
+            +'<span class="docs-desc">'+e.desc+'</span>'
+            +'<span class="docs-arrow">\u25B6</span>'
+            +'</div>'
+            +'<div class="docs-endpoint-body">'
+            +'<div class="docs-curl">'
+            +'<pre>curl -s "<span class="docs-base-path">&lt;BASE_URL&gt;</span>/'+e.path+'" | head -c 400</pre>'
+            +'<button class="copy-btn" style="opacity:1" onclick="copyVal(this, this.closest(\'.docs-curl\').querySelector(\'pre\').textContent.trim())">copy</button>'
+            +'</div>'
+            +'<div class="docs-try">'
+            +'<button onclick="tryDocsEndpoint('+i+')">Try it</button>'
+            +'<span style="font-size:11px;color:var(--fg2)">fetches the real file and shows the first 400 chars of JSON</span>'
+            +'</div>'
+            +'<div class="docs-try-result" id="docs-try-'+i+'"></div>'
+            +'</div>'
+            +'</div>';
+    });
+    host.innerHTML=html;
+    host.dataset.rendered='1';
+}
+
+function toggleDocsEndpoint(i){
+    var el=document.getElementById('docs-ep-'+i);
+    if(el)el.classList.toggle('open');
+}
+
+function tryDocsEndpoint(i){
+    var e=API_ENDPOINTS[i];
+    var out=document.getElementById('docs-try-'+i);
+    if(!out)return;
+    out.style.display='block';
+    out.textContent='Fetching '+e.path+'...';
+    fetch(e.path).then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        return r.text();
+    }).then(function(t){
+        out.textContent=t.slice(0,400)+((t.length>400)?'\n... ('+t.length.toLocaleString()+' chars total)':'');
+    }).catch(function(err){
+        out.textContent='Error: '+err.message+(location.protocol==='file:'?' (make sure site/local/api/ exists next to the page)':'');
+    });
+}
+
 // ===== NAVIGATION =====
 var currentSection = 'overview';
 function showSection(s){
@@ -1126,10 +1281,11 @@ function showSection(s){
     document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
     var navItem = document.querySelector('.nav-item[data-section="'+s+'"]');
     if(navItem) navItem.classList.add('active');
-    var names={overview:'Overview',basic:'Basic Types',offsets:'Offsets',decrypts:'Decrypts',names:'Names',functions:'Functions',objects:'Objects',sdk:'SDK','apex-mics':'Global Pointers','apex-buttons':'Buttons','apex-recvtables':'RecvTables','apex-convars':'Convars'};
+    var names={overview:'Overview',basic:'Basic Types',docs:'API Docs',offsets:'Offsets',decrypts:'Decrypts',names:'Names',functions:'Functions',objects:'Objects',sdk:'SDK','apex-mics':'Global Pointers','apex-buttons':'Buttons','apex-recvtables':'RecvTables','apex-convars':'Convars'};
     document.getElementById('breadcrumb').innerHTML='<span>'+(names[s]||s)+'</span>';
     document.getElementById('content').scrollTop=0;
     if(s==='sdk')setTimeout(function(){sdkRenderVirtual()},50);
+    if(s==='docs')renderDocsEndpoints();
 }
 
 // ===== NAMES =====
@@ -1634,6 +1790,7 @@ function onCaptchaSuccess(){
 initFuncLetters();
 initSDKTabs();
 filterSDK();
+renderDocsEndpoints();
 document.getElementById('sdk-scroll-container').addEventListener('scroll',function(){sdkRenderVirtual()});
 filterNames();
 filterFunctions();
