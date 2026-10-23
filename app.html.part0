@@ -442,6 +442,7 @@ struct Offsets {
             <div class="panel" id="panel-offsets">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
                     <div style="color:var(--fg2);font-size:12px;flex:1">Memory offsets for UE4/UE5 internal structures. Base offsets for navigating the engine at runtime.</div>
+                    <input type="text" id="offset-search" placeholder="Search offsets..." oninput="filterOffsets()" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:7px 10px;font-size:12px;font-family:inherit;outline:none">
                     <button onclick="copyOffsets()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Copy Offsets</button>
                     <button onclick="exportOffsets()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Export Offsets</button>
                 </div>
@@ -6173,6 +6174,7 @@ inline uint64_t Get(const ReadFn&amp; rd, uint64_t base)
             <div class="panel" id="panel-valorant-offsets">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
                     <div style="color:var(--fg2);font-size:12px;flex:1">Valorant memory offsets for VALORANT-Win64-Shipping.exe</div>
+                    <input type="text" id="valorant-offset-search" placeholder="Search offsets..." oninput="filterValorantOffsets()" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:7px 10px;font-size:12px;font-family:inherit;outline:none">
                     <button onclick="copyValorantOffsets()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Copy Offsets</button>
                     <button onclick="exportValorantOffsets()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Export Offsets</button>
                 </div>

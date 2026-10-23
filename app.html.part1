@@ -849,6 +849,24 @@ function exportValorantObjects(){
     downloadText('ObjectDump_Valorant.txt', text);
 }
 
+// ===== OFFSET SEARCH =====
+function filterOffsets(){
+    var q=document.getElementById('offset-search').value.toLowerCase();
+    var els=document.querySelectorAll('#panel-offsets .offset-entry');
+    els.forEach(function(e){
+        var t=e.textContent.toLowerCase();
+        e.style.display=t.indexOf(q)!==-1?'':'none';
+    });
+}
+function filterValorantOffsets(){
+    var q=document.getElementById('valorant-offset-search').value.toLowerCase();
+    var els=document.querySelectorAll('#panel-valorant-offsets .offset-entry');
+    els.forEach(function(e){
+        var t=e.textContent.toLowerCase();
+        e.style.display=t.indexOf(q)!==-1?'':'none';
+    });
+}
+
 // ===== CAPTCHA =====
 function onCaptchaSuccess(){
     var ov=document.getElementById('captcha-overlay');
