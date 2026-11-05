@@ -7,12 +7,19 @@ function checkStatus(){
 var games=[
     {id:'fortnite',api:'fortnite'},
     {id:'apex',api:'apex_legends'},
-    {id:'valorant',api:'valorant'}
+    {id:'valorant',api:'valorant'},
+    {id:'roblox',api:'roblox'}
 ];
     games.forEach(function(g){
         var dot=document.getElementById('dot-'+g.id);
         var ver=document.getElementById('ver-'+g.id);
         if(!EMBEDDED_VERSIONS[g.id]){dot.className='status-dot red';return;}
+        if(g.id==='roblox'){
+            var rv=robloxData&&robloxData.version;
+            if(ver)ver.textContent=rv||'';
+            dot.className=rv?'status-dot green':'status-dot red';
+            return;
+        }
         var url='https://agametracker.iamstern.xyz/api/status?game='+g.api;
         fetch(url).then(function(r){return r.json()}).then(function(data){
             var live=extractVersion(g.id,data);
@@ -30,39 +37,117 @@ var games=[
         });
     });
 }
+function setRobloxStatus(version, updated){
+    var dot=document.getElementById('dot-roblox');
+    var ver=document.getElementById('ver-roblox');
+    if(ver)ver.textContent=version||'';
+    if(dot){
+        dot.className=version?'status-dot green':'status-dot red';
+        dot.title=updated?'Updated from Theo API':'Roblox API snapshot';
+    }
+}
+function refreshRobloxData(){
+    fetch(ROBLOX_RUNTIME_API+'/roblox/version',{cache:'no-store'}).then(function(response){
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        return response.text();
+    }).then(function(liveVersion){
+        liveVersion=liveVersion.trim();
+        if(!liveVersion||liveVersion===robloxData.version){
+            setRobloxStatus(robloxData.version,false);
+            return null;
+        }
+        return Promise.all(ROBLOX_RUNTIME_FILES.map(function(filename){
+            return fetch(ROBLOX_RUNTIME_API+'/'+filename,{cache:'no-store'}).then(function(response){
+                if(!response.ok)throw new Error(filename+' HTTP '+response.status);
+                return filename.endsWith('.json')?response.json():response.text();
+            }).then(function(content){return {name:filename,content:content};});
+        })).then(function(files){
+            var refreshed={};
+            files.forEach(function(file){refreshed[file.name]=file.content;});
+            robloxData={version:liveVersion,files:refreshed,source:ROBLOX_RUNTIME_API};
+            EMBEDDED_VERSIONS.roblox=liveVersion;
+            setRobloxStatus(liveVersion,true);
+            renderRobloxOverview();
+            filterRobloxOffsets();
+            showRobloxRawFile();
+        });
+    }).catch(function(error){
+        setRobloxStatus(robloxData&&robloxData.version,'');
+        var dot=document.getElementById('dot-roblox');
+        if(dot)dot.title='Could not check Roblox API: '+error.message;
+    });
+}
 function extractVersion(game,data){
     return data.buildVersion||'';
 }
 
 // ===== API DOCS =====
 var API_ENDPOINTS = [
-    {path:'api/manifest.json', desc:'API metadata, counters and endpoint list'},
-    {path:'api/offsets.json', desc:'Offsets grouped by namespace + raw Offsets.hpp'},
-    {path:'api/decrypts.json', desc:'Decrypt constants by file/namespace + raw headers'},
-    {path:'api/names.json', desc:'GNames name pool: [{index, name}]'},
-    {path:'api/objects.json', desc:'GObjects dump: [{index, type, name}]'},
-    {path:'api/typeCounts.json', desc:'Object type breakdown: {type: count}'},
-    {path:'api/functions.json', desc:'UFunctions grouped by class: {class: [{name, flags}]}'},
-    {path:'api/sdk.json', desc:'SDK type index (names only): {Classes, Structs, Enums}'},
-    {path:'api/sdkContent.json', desc:'Full SDK header sources — split across 5 parts (.part0..part4, merge and JSON.parse each)'},
-    {path:'api/apex.json', desc:'Apex dump: mics, buttons, recvTables, convars, stats'}
+    {game:'fortnite',path:'manifest.json', desc:'API metadata, counters and endpoint list'},
+    {game:'fortnite',path:'offsets.json', desc:'Offsets grouped by namespace + raw Offsets.hpp'},
+    {game:'fortnite',path:'decrypts.json', desc:'Decrypt constants by file/namespace + raw headers'},
+    {game:'fortnite',path:'names.json', desc:'GNames name pool: [{index, name}]'},
+    {game:'fortnite',path:'objects.json', desc:'GObjects dump: [{index, type, name}]'},
+    {game:'fortnite',path:'typeCounts.json', desc:'Object type breakdown: {type: count}'},
+    {game:'fortnite',path:'functions.json', desc:'UFunctions grouped by class: {class: [{name, offset}]} (empty {} for Fortnite)'},
+    {game:'fortnite',path:'sdk.json', desc:'SDK type index (names only): {Classes, Structs, Enums}'},
+    {game:'fortnite',path:'sdkContent.json.part0', desc:'Full SDK header sources (part 0 of 2), merge with part1 via Object.assign'},
+    {game:'fortnite',path:'sdkContent.json.part1', desc:'Full SDK header sources (part 1 of 2)'},
+    {game:'valorant',path:'manifest.json', desc:'Valorant API metadata'},
+    {game:'valorant',path:'offsets.json', desc:'Valorant offsets grouped by namespace + raw Offsets.hpp'},
+    {game:'valorant',path:'decrypts.json', desc:'Valorant decrypt constants by file/namespace + raw headers'},
+    {game:'valorant',path:'names.json', desc:'Valorant GNames name pool: [{index, name}]'},
+    {game:'valorant',path:'objects.json', desc:'Valorant GObjects dump: [{index, type, name}]'},
+    {game:'valorant',path:'typeCounts.json', desc:'Valorant object type breakdown: {type: count}'},
+    {game:'valorant',path:'functions.json', desc:'Valorant UFunctions grouped by class: {class: [{name, offset}]}'},
+    {game:'valorant',path:'sdk.json', desc:'Valorant SDK type index (names only): {Classes, Structs, Enums}'},
+    {game:'valorant',path:'sdkContent.json.part0', desc:'Valorant SDK header sources (part 0 of 5)'},
+    {game:'valorant',path:'sdkContent.json.part1', desc:'Valorant SDK header sources (part 1 of 5)'},
+    {game:'valorant',path:'sdkContent.json.part2', desc:'Valorant SDK header sources (part 2 of 5)'},
+    {game:'valorant',path:'sdkContent.json.part3', desc:'Valorant SDK header sources (part 3 of 5)'},
+    {game:'valorant',path:'sdkContent.json.part4', desc:'Valorant SDK header sources (part 4 of 5)'},
+    {game:'apex',path:'apex.json', desc:'Apex dump: mics, buttons, recvTables, convars, stats'},
+    {game:'roblox',path:'manifest.json', desc:'Roblox source, version and available files'},
+    {game:'roblox',path:'offsets.json', desc:'Roblox offsets in decimal JSON'},
+    {game:'roblox',path:'offsetshex.json', desc:'Roblox offsets in hexadecimal JSON'},
+    {game:'roblox',path:'fflags.json', desc:'Roblox FFlags in decimal JSON'},
+    {game:'roblox',path:'fflagshex.json', desc:'Roblox FFlags in hexadecimal JSON'},
+    {game:'roblox',path:'types.json', desc:'Roblox type metadata'},
+    {game:'roblox',path:'offsets.hpp', desc:'Raw Roblox offsets header'},
+    {game:'roblox',path:'fflags.hpp', desc:'Raw Roblox FFlags header'},
+    {game:'roblox',path:'struct.hpp', desc:'Raw Roblox struct header'}
+];
+
+var API_FIELDS = [
+    {ep:'{game}/offsets.json', shape:'{"namespaces": {"Offsets": {"GWorld": "0x..."}}, "rawOffsetsHpp": "..."}'},
+    {ep:'{game}/decrypts.json', shape:'{"files": {"file.hpp": {"Namespace": [{"name": "X", "value": "0x...", "type": "uint32_t"}]}}, "rawHeaders": {...}}'},
+    {ep:'{game}/names.json', shape:'[{"index": 0, "name": "ObjectRedirector"}, ...]'},
+    {ep:'{game}/objects.json', shape:'[{"index": 0, "type": "Class", "name": "/Script/Engine.Engine"}, ...]'},
+    {ep:'{game}/typeCounts.json', shape:'{"Class": 12345, "Function": 6789, ...}'},
+    {ep:'{game}/functions.json', shape:'{"ClassName": [{"name": "Foo", "offset": "0x..."}], ...} (empty {} for Fortnite)'},
+    {ep:'{game}/sdk.json', shape:'{"Classes": ["AActor", ...], "Structs": [...], "Enums": [...]} (names only)'},
+    {ep:'{game}/sdkContent.json.partN', shape:'{"Category/Name": "// header source ...", ...} (merge parts with Object.assign)'},
+    {ep:'apex/apex.json', shape:'{"mics": [[name, 0x..]...], "buttons": [...], "recvTables": {"table": [[field, 0x..]...]}, "convars": [...], "stats": {...}}'},
+    {ep:'roblox/offsets.json', shape:'{"Roblox Version": "version-...", "Offsets": {"Class": {"Field": 123}}}'},
+    {ep:'roblox/types.json', shape:'{"Roblox Version": "version-...", "Types": {"Class": {"Field": "type"}}}'}
 ];
 
 function renderDocsEndpoints(){
-    var host=document.getElementById('docs-endpoints');
-    if(!host||host.dataset.rendered)return;
-    var html='';
+    var epHost=document.getElementById('docs-endpoints');
+    var fldHost=document.getElementById('docs-fields');
+    if(!epHost||epHost.dataset.rendered)return;
+    var epHtml='';
     API_ENDPOINTS.forEach(function(e,i){
-        html+='<div class="docs-endpoint" id="docs-ep-'+i+'">'
+        epHtml+='<div class="docs-endpoint" id="docs-ep-'+i+'">'
             +'<div class="docs-endpoint-head" onclick="toggleDocsEndpoint('+i+')">'
             +'<span class="docs-method">GET</span>'
-            +'<span class="docs-path">'+e.path+'</span>'
+            +'<span class="docs-path">'+e.game+'/'+e.path+'</span>'
             +'<span class="docs-desc">'+e.desc+'</span>'
             +'<span class="docs-arrow">\u25B6</span>'
             +'</div>'
             +'<div class="docs-endpoint-body">'
             +'<div class="docs-curl">'
-            +'<pre>curl -s "<span class="docs-base-path">&lt;BASE_URL&gt;</span>/'+e.path+'" | head -c 400</pre>'
+            +'<pre>curl -s "https://deko661.github.io/hwidr-dump-site/api/'+e.game+'/'+e.path+'" | head -c 400</pre>'
             +'<button class="copy-btn" style="opacity:1" onclick="copyVal(this, this.closest(\'.docs-curl\').querySelector(\'pre\').textContent.trim())">copy</button>'
             +'</div>'
             +'<div class="docs-try">'
@@ -73,8 +158,14 @@ function renderDocsEndpoints(){
             +'</div>'
             +'</div>';
     });
-    host.innerHTML=html;
-    host.dataset.rendered='1';
+    epHost.innerHTML=epHtml;
+    epHost.dataset.rendered='1';
+
+    var fldHtml='';
+    API_FIELDS.forEach(function(f){
+        fldHtml+='<tr><td>'+f.ep+'</td><td>'+f.shape+'</td></tr>';
+    });
+    fldHost.innerHTML=fldHtml;
 }
 
 function toggleDocsEndpoint(i){
@@ -87,8 +178,9 @@ function tryDocsEndpoint(i){
     var out=document.getElementById('docs-try-'+i);
     if(!out)return;
     out.style.display='block';
-    out.textContent='Fetching '+e.path+'...';
-    fetch(e.path).then(function(r){
+    var url=new URL('./'+e.game+'/'+e.path, location.href).href;
+    out.textContent='Fetching '+url+'...';
+    fetch(url).then(function(r){
         if(!r.ok)throw new Error('HTTP '+r.status);
         return r.text();
     }).then(function(t){
@@ -107,7 +199,8 @@ function showSection(s){
     document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
     var navItem = document.querySelector('.nav-item[data-section="'+s+'"]');
     if(navItem) navItem.classList.add('active');
-    var names={overview:'Overview',basic:'Basic Types',docs:'API Docs',offsets:'Offsets',decrypts:'Decrypts',names:'Names',functions:'Functions',objects:'Objects',sdk:'SDK','apex-mics':'Global Pointers','apex-buttons':'Buttons','apex-recvtables':'RecvTables','apex-convars':'Convars'};
+    var names={overview:'Overview',basic:'Basic Types',docs:'API Docs',offsets:'Offsets',decrypts:'Decrypts',names:'Names',functions:'Functions',objects:'Objects',sdk:'SDK','apex-mics':'Global Pointers','apex-buttons':'Buttons','apex-recvtables':'RecvTables','apex-convars':'Convars','apex-dump':'Full Dump'};
+        names['roblox-offsets']='Roblox Offsets';names['roblox-fflags']='Roblox FFlags';names['roblox-types']='Roblox Types';names['roblox-files']='Roblox Raw Files';
     document.getElementById('breadcrumb').innerHTML='<span>'+(names[s]||s)+'</span>';
     document.getElementById('content').scrollTop=0;
     if(s==='sdk')setTimeout(function(){sdkRenderVirtual()},50);
@@ -460,6 +553,31 @@ function downloadText(filename, text){
     URL.revokeObjectURL(a.href);
 }
 
+// ===== APEX DUMP TXT =====
+function copyApexDump(){
+    var pre=document.getElementById('apex-dump-text');
+    if(!pre)return;
+    navigator.clipboard.writeText(pre.textContent);
+}
+function selectAllApexDump(){
+    var pre=document.getElementById('apex-dump-text');
+    if(!pre)return;
+    var range=document.createRange();
+    range.selectNodeContents(pre);
+    var sel=window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+document.addEventListener('keydown',function(e){
+    if(e.ctrlKey&&e.key==='a'){
+        var pre=document.getElementById('apex-dump-text');
+        if(pre&&(e.target===pre||pre.contains(e.target))){
+            e.preventDefault();
+            selectAllApexDump();
+        }
+    }
+});
+
 // ===== GAME SWITCHING =====
 var currentGame = 'fortnite';
 
@@ -529,11 +647,12 @@ function switchGame(game){
     currentGame = game;
     document.querySelectorAll('.game-btn').forEach(function(b){b.classList.toggle('active',b.textContent.toLowerCase().indexOf(game)!==-1)});
     document.querySelectorAll('.nav-game').forEach(function(n){n.classList.toggle('active',n.getAttribute('data-game')===game)});
-    document.getElementById('sidebar-subtitle').textContent=game==='fortnite'?'Fortnite Dumper Viewer':game==='apex'?'Apex Legends Dumper Viewer':'Valorant Dumper Viewer';
+    document.getElementById('sidebar-subtitle').textContent=game==='fortnite'?'Fortnite Dumper Viewer':game==='apex'?'Apex Legends Dumper Viewer':game==='valorant'?'Valorant Dumper Viewer':'Roblox Offsets Viewer';
     document.getElementById('overview-fortnite').style.display=game==='fortnite'?'':'none';
     document.getElementById('overview-apex').style.display=game==='apex'?'':'none';
     document.getElementById('overview-valorant').style.display=game==='valorant'?'':'none';
-    fetchBuildStatus(game==='apex'?'apex_legends':game==='valorant'?'valorant':'fortnite');
+    document.getElementById('overview-roblox').style.display=game==='roblox'?'':'none';
+    if(game!=='roblox')fetchBuildStatus(game==='apex'?'apex_legends':game==='valorant'?'valorant':'fortnite');
     if(game==='apex'){
         renderApexOverview();
         filterApexMics();
@@ -548,7 +667,94 @@ function switchGame(game){
         initValorantSDKTabs();
         filterValorantSDK();
     }
+    if(game==='roblox'){
+        renderRobloxOverview();
+        filterRobloxOffsets();
+        showRobloxRawFile();
+    }
     showSection('overview');
+}
+
+// ===== ROBLOX =====
+function robloxFiles(){return robloxData&&robloxData.files?robloxData.files:{};}
+function robloxPayload(name, key){
+    var data=robloxFiles()[name]||{};
+    return key&&data[key]?data[key]:data;
+}
+function flattenRobloxMap(data){
+    var rows=[];
+    Object.keys(data||{}).forEach(function(group){
+        var value=data[group];
+        if(value&&typeof value==='object'&&!Array.isArray(value)){
+            Object.keys(value).forEach(function(field){rows.push({group:group,name:field,value:value[field]})});
+        }else rows.push({group:'General',name:group,value:value});
+    });
+    return rows;
+}
+function renderRobloxRows(hostId, rows, labelId, query){
+    var q=(query||'').toLowerCase();
+    var filtered=rows.filter(function(row){return !q||(row.group+' '+row.name+' '+(row.type||'')+' '+String(row.value)).toLowerCase().indexOf(q)!==-1});
+    var html='';
+    var groups={};
+    filtered.forEach(function(row){(groups[row.group]||(groups[row.group]=[])).push(row)});
+    Object.keys(groups).sort().forEach(function(group){
+        html+='<div class="offset-group"><div class="offset-ns">'+esc(group)+'</div>';
+        groups[group].forEach(function(row){
+            var value=typeof row.value==='object'?JSON.stringify(row.value):String(row.value);
+            var displayValue=row.hex?robloxHex(value):value;
+            var type=row.type?'<span style="color:var(--fg2);margin-right:12px">'+esc(row.type)+'</span>':'';
+            html+='<div class="offset-entry"><span class="offset-name">'+esc(row.name)+'</span><span class="offset-val">'+type+esc(displayValue)+' <button class="copy-btn" style="opacity:1" onclick="copyVal(this,\''+jsSafe(displayValue)+'\')">copy</button></span></div>';
+        });
+        html+='</div>';
+    });
+    document.getElementById(hostId).innerHTML=html||'<div class="docs-note">No matching entries.</div>';
+    document.getElementById(labelId).textContent='Showing '+filtered.length.toLocaleString()+' of '+rows.length.toLocaleString()+' entries';
+}
+function jsSafe(value){return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r');}
+function robloxHex(value){
+    var text=String(value);
+    if(/^0x/i.test(text))return '0x'+text.slice(2).toUpperCase();
+    var number=Number(value);
+    return Number.isFinite(number)?'0x'+number.toString(16).toUpperCase():text;
+}
+function robloxOffsetsRows(){
+    var offsets=robloxPayload('offsets.json','Offsets');
+    var types=robloxPayload('types.json','Types');
+    var rows=[];
+    Object.keys(offsets||{}).forEach(function(group){
+        var fields=offsets[group];
+        if(fields&&typeof fields==='object'&&!Array.isArray(fields))Object.keys(fields).forEach(function(field){
+            rows.push({group:group,name:field,value:fields[field],type:(types[group]||{})[field]||'',hex:true});
+        });
+    });
+    return rows;
+}
+function filterRobloxOffsets(){
+    var input=document.getElementById('roblox-offset-search');
+    if(input)renderRobloxRows('roblox-offset-list',robloxOffsetsRows(),'roblox-offset-count-label',input.value);
+}
+function renderRobloxOverview(){
+    var files=robloxFiles(),offsets=files['offsets.json']||{},types=files['types.json']||{};
+    var offsetRows=robloxOffsetsRows();
+    document.getElementById('roblox-version').textContent=robloxData.version||'-';
+    document.getElementById('roblox-dumper').textContent=offsets['Dumper Version']||'-';
+    document.getElementById('roblox-offset-count').textContent=(offsets['Total Offsets']||offsetRows.length).toLocaleString();
+    document.getElementById('roblox-dumped').textContent=offsets['Dumped At']||'-';
+    document.getElementById('roblox-group-count').textContent=offsetRows.length.toLocaleString();
+    document.getElementById('roblox-type-count').textContent=Object.keys(types['Types']||{}).length.toLocaleString();
+}
+function showRobloxRawFile(){
+    var select=document.getElementById('roblox-file-select'),files=robloxFiles();
+    if(!select)return;
+    if(!select.options.length)Object.keys(files).filter(function(name){return /\.(hpp|json)$/i.test(name)}).sort().forEach(function(name){select.add(new Option(name,name))});
+    var name=select.value,content=files[name];
+    document.getElementById('roblox-file-header').textContent=name||'Select a file';
+    document.getElementById('roblox-file-content').textContent=typeof content==='string'?content:JSON.stringify(content,null,2);
+}
+function exportRobloxFile(name){
+    var content=robloxFiles()[name];
+    if(content===undefined)return;
+    downloadText(name,typeof content==='string'?content:JSON.stringify(content,null,2));
 }
 
 // ===== APEX OVERVIEW =====
@@ -583,45 +789,37 @@ function filterApexButtons(){
 }
 
 // ===== APEX RECVTABLES =====
-var apexRTFiltered=null,apexRTSelected='',apexRTItemH=32;
+var apexRTFiltered=null,apexRTSelected='';
 function filterApexRT(){
     if(!apexData)return;
     var q=document.getElementById('apex-rt-search').value.toLowerCase();
     var keys=Object.keys(apexData.recvTables);
     apexRTFiltered=q?keys.filter(function(k){return k.toLowerCase().indexOf(q)!==-1}):keys.slice();
     document.getElementById('apex-rt-count').textContent=apexRTFiltered.length+' tables';
-    apexRTRenderVirtual();
+    apexRTRender();
 }
-function apexRTRenderVirtual(){
-    var container=document.getElementById('apex-rt-scroll-container');
+function apexRTRender(){
     var list=document.getElementById('apex-rt-list');
-    var spacer=document.getElementById('apex-rt-scroll-spacer');
     var total=apexRTFiltered?apexRTFiltered.length:0;
-    spacer.style.height=(total*apexRTItemH)+'px';
-    var scrollTop=container.scrollTop;
-    var viewH=container.clientHeight;
-    var start=Math.max(0,Math.floor(scrollTop/apexRTItemH)-10);
-    var end=Math.min(total,Math.ceil((scrollTop+viewH)/apexRTItemH)+10);
     var html='';
-    for(var i=start;i<end;i++){
+    for(var i=0;i<total;i++){
         var name=apexRTFiltered[i];
         var cls=name===apexRTSelected?'sdk-file-item selected':'sdk-file-item';
         html+='<div class="'+cls+'" onclick="selectApexRT(\''+esc(name)+'\')">'+esc(name)+'</div>';
     }
     list.innerHTML=html;
-    list.style.top=(start*apexRTItemH)+'px';
 }
 function selectApexRT(name){
     apexRTSelected=name;
     document.getElementById('apex-rt-name').textContent=name;
     var fields=apexData.recvTables[name]||[];
-    var html='<table class="dump-table"><thead><tr><th>Field</th><th>Offset</th><th></th></tr></thead><tbody>';
+    var html='<table class="dump-table"><thead><tr><th>Field</th><th>Offset</th></tr></thead><tbody>';
     fields.forEach(function(f){
         html+='<tr><td class="name">'+esc(f[0])+'</td><td class="addr">'+f[1]+'</td><td><button class="copy-btn" onclick="copyVal(this,\''+f[1]+'\')">copy</button></td></tr>';
     });
     html+='</tbody></table>';
     document.getElementById('apex-rt-content').innerHTML=html;
-    apexRTRenderVirtual();
+    apexRTRender();
 }
 
 // ===== VALORANT NAMES =====
@@ -749,27 +947,19 @@ function filterValorantSDK(){
     var all=valorantSdkData[valorantSdkCat]||[];
     valorantSdkFiltered=q?all.filter(function(k){return k.toLowerCase().indexOf(q)!==-1}):all.slice();
     document.getElementById('valorant-sdk-count').textContent=valorantSdkFiltered.length+' items';
-    valorantSdkRenderVirtual();
+    valorantSdkRender();
 }
-function valorantSdkRenderVirtual(){
-    var container=document.getElementById('valorant-sdk-scroll-container');
+function valorantSdkRender(){
     var list=document.getElementById('valorant-sdk-list');
-    var spacer=document.getElementById('valorant-sdk-scroll-spacer');
     var total=valorantSdkFiltered?valorantSdkFiltered.length:0;
-    spacer.style.height=(total*valorantSdkItemH)+'px';
-    var scrollTop=container.scrollTop;
-    var viewH=container.clientHeight;
-    var start=Math.max(0,Math.floor(scrollTop/valorantSdkItemH)-10);
-    var end=Math.min(total,Math.ceil((scrollTop+viewH)/valorantSdkItemH)+10);
     var html='';
-    for(var i=start;i<end;i++){
+    for(var i=0;i<total;i++){
         var name=valorantSdkFiltered[i];
         var key=valorantSdkCat+'/'+name;
         var cls=key===valorantSdkSelected?'sdk-file-item selected':'sdk-file-item';
         html+='<div class="'+cls+'" onclick="selectValorantSDK(\''+esc(name)+'\')">'+esc(name)+'</div>';
     }
     list.innerHTML=html;
-    list.style.top=(start*valorantSdkItemH)+'px';
 }
 function selectValorantSDK(name){
     valorantSdkSelected=name;
@@ -777,7 +967,7 @@ function selectValorantSDK(name){
     document.getElementById('valorant-sdk-file-cat').textContent=valorantSdkCat.slice(0,-1);
     var content=valorantSdkContent[valorantSdkCat+'/'+name]||'// No content available';
     document.getElementById('valorant-sdk-file-content').innerHTML='<pre style="margin:0;padding:16px;font-size:12px;line-height:1.6;color:var(--fg);white-space:pre;overflow-x:auto">'+highlightSDK(content)+'</pre>';
-    valorantSdkRenderVirtual();
+    valorantSdkRender();
 }
 
 // ===== VALORANT OFFSETS =====
@@ -852,18 +1042,30 @@ function exportValorantObjects(){
 // ===== OFFSET SEARCH =====
 function filterOffsets(){
     var q=document.getElementById('offset-search').value.toLowerCase();
-    var els=document.querySelectorAll('#panel-offsets .offset-entry');
-    els.forEach(function(e){
-        var t=e.textContent.toLowerCase();
-        e.style.display=t.indexOf(q)!==-1?'':'none';
+    var groups=document.querySelectorAll('#panel-offsets .offset-group');
+    groups.forEach(function(g){
+        var entries=g.querySelectorAll('.offset-entry');
+        var any=false;
+        entries.forEach(function(e){
+            var m=e.textContent.toLowerCase().indexOf(q)!==-1;
+            e.style.display=m?'':'none';
+            if(m)any=true;
+        });
+        g.style.display=(q===''||any)?'':'none';
     });
 }
 function filterValorantOffsets(){
     var q=document.getElementById('valorant-offset-search').value.toLowerCase();
-    var els=document.querySelectorAll('#panel-valorant-offsets .offset-entry');
-    els.forEach(function(e){
-        var t=e.textContent.toLowerCase();
-        e.style.display=t.indexOf(q)!==-1?'':'none';
+    var groups=document.querySelectorAll('#panel-valorant-offsets .offset-group');
+    groups.forEach(function(g){
+        var entries=g.querySelectorAll('.offset-entry');
+        var any=false;
+        entries.forEach(function(e){
+            var m=e.textContent.toLowerCase().indexOf(q)!==-1;
+            e.style.display=m?'':'none';
+            if(m)any=true;
+        });
+        g.style.display=(q===''||any)?'':'none';
     });
 }
 
@@ -880,18 +1082,17 @@ initSDKTabs();
 filterSDK();
 renderDocsEndpoints();
 document.getElementById('sdk-scroll-container').addEventListener('scroll',function(){sdkRenderVirtual()});
-document.getElementById('valorant-sdk-scroll-container').addEventListener('scroll',function(){valorantSdkRenderVirtual()});
 filterNames();
 filterFunctions();
 filterObjects();
 if(apexData){
     filterApexRT();
-    document.getElementById('apex-rt-scroll-container').addEventListener('scroll',function(){apexRTRenderVirtual()});
 }
 fetchBuildStatus('fortnite');
 fetchBuildStatus('apex_legends');
 fetchBuildStatus('valorant');
 checkStatus();
+refreshRobloxData();
 
 
 ;
