@@ -173,6 +173,7 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
 /* PANELS */
 .panel{display:none}
 .panel.active{display:block}
+#panel-apex-dump.panel.active{display:flex;flex-direction:column}
 #panel-sdk.active{display:flex}
 </style>
 </head>
@@ -8750,7 +8751,7 @@ inline uint64_t DecodeState(uint32_t key, const uint64_t state[7], StateKind kin
             </div>
 
             <!-- APEX DUMP TXT -->
-            <div class="panel" id="panel-apex-dump" style="display:flex;flex-direction:column;height:calc(100vh - 44px);overflow:hidden;padding:0;border-top:1px solid var(--border);box-sizing:border-box">
+            <div class="panel" id="panel-apex-dump" style="height:calc(100vh - 44px);overflow:hidden;padding:0;border-top:1px solid var(--border);box-sizing:border-box">
                 <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0">
                     <div style="color:var(--fg2);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Apex dump entier (r5apex_dx12.exe.txt)</div>
                     <button onclick="exportApexDump()" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--fg);padding:6px 12px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap">Export Dump</button>
