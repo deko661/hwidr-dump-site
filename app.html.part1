@@ -192,6 +192,8 @@ function tryDocsEndpoint(i){
 
 // ===== NAVIGATION =====
 var currentSection = 'overview';
+// ===== NAVIGATION =====
+var currentSection = 'overview';
 function showSection(s){
     currentSection = s;
     document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});

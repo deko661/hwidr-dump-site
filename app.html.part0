@@ -175,6 +175,40 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
 .panel.active{display:block}
 #panel-apex-dump.panel.active{display:flex;flex-direction:column}
 #panel-sdk.active{display:flex}
+
+/* MOBILE TOGGLE */
+.mobile-toggle{display:none;position:fixed;top:10px;left:10px;z-index:10000;background:var(--bg2);border:1px solid var(--border);color:var(--fg);width:40px;height:40px;border-radius:4px;cursor:pointer;font-size:18px;align-items:center;justify-content:center}
+.mobile-toggle:active{background:var(--hover)}
+
+/* RESPONSIVE */
+@media (max-width: 900px){
+    .mobile-toggle{display:flex}
+    .layout{flex-direction:column}
+    .sidebar{width:100%;height:auto;max-height:60vh;position:fixed;top:0;left:0;right:0;z-index:9998;transform:translateY(-100%);transition:transform .25s ease;border-right:none;border-bottom:1px solid var(--border)}
+    .sidebar.open{transform:translateY(0)}
+    .main{margin-top:0;padding-top:50px}
+    .topbar{padding-top:14px}
+    .nav-item{padding:10px 16px;font-size:13px}
+    .nav-section{padding:10px 16px 4px}
+    .content{padding:12px}
+    .offset-entry{flex-wrap:wrap;gap:8px}
+    .copy-btn{opacity:1}
+    .dump-table,.dump-table th,.dump-table td{display:block;width:100%}
+    .dump-table thead tr{position:absolute;top:-9999px;left:-9999px}
+    .dump-table tr{margin-bottom:10px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:4px;padding:8px;background:var(--bg3)}
+    .dump-table td{border:none;padding:4px 0;border-bottom:1px solid var(--border2)}
+    .dump-table td:last-child{border-bottom:none}
+    .pagination button{padding:6px 10px}
+    .sdk-list{grid-template-columns:1fr}
+    .build-bar{flex-direction:column;gap:8px}
+    .build-item{border-right:none;border-bottom:1px solid var(--border);padding:8px 12px}
+    .build-item:last-child{border-bottom:none}
+    .stats-grid{grid-template-columns:1fr}
+    .game-selector{flex-wrap:wrap}
+    .game-btn{flex:1;min-width:80px;text-align:center}
+    .docs-header-row{flex-direction:column;align-items:flex-start}
+    .docs-header-row .spacer{display:none}
+}
 </style>
 </head>
 <body>
@@ -183,6 +217,7 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
     <div class="captcha-sub">Checking...</div>
     <div class="cf-turnstile" data-sitekey="0x4AAAAAAEct7SWC6yI9-pD8" data-callback="onCaptchaSuccess" data-theme="dark"></div>
 </div>
+<button class="mobile-toggle" id="mobile-toggle" onclick="toggleSidebar()">☰</button>
 <div class="layout">
     <div class="sidebar">
         <div class="sidebar-header">
@@ -515,7 +550,7 @@ Example: GET https://deko661.github.io/hwidr-dump-site/api/fortnite/offsets.json
 <div class="offset-entry"><span class="offset-name">GNames</span><span class="offset-val">0x1c889440 <button class="copy-btn" onclick="copyVal(this,'0x1c889440')">copy</button></span></div>
 <div class="offset-entry"><span class="offset-name">GObjectsChunks</span><span class="offset-val">0x1c966f20 <button class="copy-btn" onclick="copyVal(this,'0x1c966f20')">copy</button></span></div>
 <div class="offset-entry"><span class="offset-name">GObjectsNum</span><span class="offset-val">0x1c966f28 <button class="copy-btn" onclick="copyVal(this,'0x1c966f28')">copy</button></span></div>
-<div class="offset-entry"><span class="offset-name">GEngine</span><span class="offset-val">0x0 <button class="copy-btn" onclick="copyVal(this,'0x0')">copy</button></span></div>
+<div class="offset-entry"><span class="offset-name">GEngine</span><span class="offset-val">0x1c9dc1D8 <button class="copy-btn" onclick="copyVal(this,'0x1c9dc1D8')">copy</button></span></div>
 <div class="offset-entry"><span class="offset-name">GWorld</span><span class="offset-val">0x1c9da790 <button class="copy-btn" onclick="copyVal(this,'0x1c9da790')">copy</button></span></div>
 <div class="offset-entry"><span class="offset-name">GetWorldVft</span><span class="offset-val">0x158 <button class="copy-btn" onclick="copyVal(this,'0x158')">copy</button></span></div>
 <div class="offset-entry"><span class="offset-name">NamePoolBlocks</span><span class="offset-val">0x10 <button class="copy-btn" onclick="copyVal(this,'0x10')">copy</button></span></div>
