@@ -359,7 +359,7 @@ function sdkRenderVirtual(){
 function highlightSDK(code){
     var escRe=[/&/g,/</g,/>/g,/"/g];
     var escFn=function(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
-    var lines=code.split('\n');
+    var lines=code.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
     var out=[];
     for(var li=0;li<lines.length;li++){
         var ln=lines[li];
@@ -417,7 +417,7 @@ function selectSDK(name){
     document.getElementById('sdk-file-name').textContent=name;
     document.getElementById('sdk-file-cat').textContent=sdkCat.slice(0,-1);
     var content=sdkContent[key]||'// No content available';
-    document.getElementById('sdk-file-content').innerHTML='<pre style="margin:0;padding:16px;font-size:12px;line-height:1.6;color:var(--fg);white-space:pre;overflow-x:auto">'+highlightSDK(content)+'</pre>';
+    document.getElementById('sdk-file-content').innerHTML='<pre style="margin:0;padding:16px;font-size:12px;line-height:1.6;color:var(--fg);white-space:pre-wrap;overflow-x:auto;word-wrap:break-word">'+highlightSDK(content)+'</pre>';
     sdkRenderVirtual();
 }
 
