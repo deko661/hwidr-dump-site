@@ -325,7 +325,7 @@ html,body{height:100%;background:var(--bg);color:var(--fg);font-family:Consolas,
                     <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:24px">
                     <div style="flex:1">
                         <div style="font-size:18px;color:var(--accent);font-weight:600;margin-bottom:10px">Hey, it’s 0x661. </div>
-                        <div style="font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:10px">I’m way too tired to keep dumping the game myself, so shoutout to Bear for dumping the game after every update. I repost his dumps on this site to make them easier to browse and read.</div>
+                        <div style="font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:10px">Sometimes I dump the game myself, and otherwise I get the SDKs/dumps from UC or random APIs. I repost the dumps to make all of this easier.</div>
                         <div style="font-size:14px;color:var(--fg);line-height:1.7;margin-bottom:14px">Join the Discord: <a href="https://discord.gg/YZJgRkEyVH" target="_blank" style="color:var(--accent2);text-decoration:underline">discord.gg/YZJgRkEyVH</a></div>
                         <div style="font-size:13px;color:var(--fg2)">Enjoy the viewer.</div>
                     </div>
